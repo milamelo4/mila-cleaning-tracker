@@ -1,11 +1,11 @@
 import { NavLink } from "react-router-dom";
 
 function Navbar() {
-  const baseClass =
-    "rounded-md px-4 py-2 text-sm font-medium transition-colors";
+ const baseClass =
+  "rounded-md px-3 py-2 text-sm font-medium transition-colors";
 
   return (
-    <nav className="flex gap-2 px-6 py-3">
+    <nav className="flex gap-2 px-4 py-3">
       <NavLink
         to="/"
         className={({ isActive }) =>
