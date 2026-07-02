@@ -11,8 +11,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:bg-slate-100"
+            ? "bg-[#606C38] text-white"
+            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -24,8 +24,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:bg-slate-100"
+            ? "bg-[#606C38] text-white"
+            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -37,8 +37,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:bg-slate-100"
+            ? "bg-[#606C38] text-white"
+            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -50,8 +50,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-              ? "bg-slate-900 text-white"
-              : "text-slate-600 hover:bg-slate-100"
+            ? "bg-[#606C38] text-white"
+            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
           }`
         }
       >

@@ -13,26 +13,26 @@ function MainLayout({ children }: MainLayoutProps) {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100">
-      <header className="bg-slate-900 px-6 py-6 text-white shadow-md">
-        <div className="mx-auto max-w-6xl">
-          <p className="text-sm text-slate-300">{currentDate}</p>
-          <h1 className="mt-1 text-3xl font-bold">
-            Mila Cleaning Tracker
-          </h1>
-        </div>
-      </header>
-
-      <div className="bg-white shadow-sm">
-        <div className="mx-auto max-w-6xl">
-          <Navbar />
-        </div>
-      </div>
-
-      <main className="mx-auto max-w-6xl px-6 py-8">
-        {children}
-      </main>
+    <div className="min-h-screen bg-[#F7F3EA]">
+  <header className="bg-[var(--olive-dark)] px-4 py-5 text-white shadow-md">
+    <div className="mx-auto max-w-6xl">
+      <p className="text-sm text-[#EDE6D6]">{currentDate}</p>
+      <h1 className="mt-1 text-3xl font-bold">
+        Mila Cleaning Tracker
+      </h1>
     </div>
+  </header>
+
+  <div className="border-b border-[var(--border-soft)] bg-[var(--card)] shadow-sm">
+    <div className="mx-auto max-w-6xl">
+      <Navbar />
+    </div>
+  </div>
+
+  <main className="mx-auto max-w-6xl px-4 py-6">
+    {children}
+  </main>
+</div>
   );
 }
 

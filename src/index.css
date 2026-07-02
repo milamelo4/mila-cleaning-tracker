@@ -1,1 +1,15 @@
 @import "tailwindcss";
+
+:root {
+    --cream: #F7F3EA;
+    --card: #FEFCF7;
+
+    --olive: #606C38;
+    --olive-dark: #283618;
+    --olive-hover: #4F5A2F;
+
+    --charcoal: #2F2A22;
+    --muted: #7A6F5D;
+    --soft: #EFE7D6;
+    --border-soft: #E6DDC8;
+}
