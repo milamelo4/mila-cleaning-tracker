@@ -12,7 +12,7 @@ function Navbar() {
           `${baseClass} ${
             isActive
             ? "bg-[#606C38] text-white"
-            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
+            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -25,7 +25,7 @@ function Navbar() {
           `${baseClass} ${
             isActive
             ? "bg-[#606C38] text-white"
-            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
+            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -38,7 +38,7 @@ function Navbar() {
           `${baseClass} ${
             isActive
             ? "bg-[#606C38] text-white"
-            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
+            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
           }`
         }
       >
@@ -51,7 +51,7 @@ function Navbar() {
           `${baseClass} ${
             isActive
             ? "bg-[#606C38] text-white"
-            : "text-[#5F5A4E] hover:bg-[#EFE7D6]"
+            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
           }`
         }
       >
