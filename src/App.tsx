@@ -4,23 +4,62 @@ import Clients from "./pages/Clients";
 import Cleanings from "./pages/Cleanings";
 import Payments from "./pages/Payments";
 import MainLayout from "./layouts/MainLayout";
-
+import Login from "./pages/Login";
 import AddClient from "./pages/AddClient";
 
 function App() {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/clients" element={<Clients />} />
-          <Route path="/cleanings" element={<Cleanings />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/clients/new" element={<AddClient />} />
-        </Routes>
-      </MainLayout>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route
+          path="/"
+          element={
+            <MainLayout>
+              <Dashboard />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/clients"
+          element={
+            <MainLayout>
+              <Clients />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/cleanings"
+          element={
+            <MainLayout>
+              <Cleanings />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/payments"
+          element={
+            <MainLayout>
+              <Payments />
+            </MainLayout>
+          }
+        />
+
+        <Route
+          path="/clients/new"
+          element={
+            <MainLayout>
+              <AddClient />
+            </MainLayout>
+          }
+        />
+      </Routes>
     </BrowserRouter>
   );
 }
 
-export default App;MainLayout
+export default App;
