@@ -7,12 +7,12 @@ function Navbar() {
   return (
     <nav className="flex gap-2 px-4 py-3">
       <NavLink
-        to="/"
+        to="/dashboard"
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
             ? "bg-[#606C38] text-white"
-            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
+            : "text-[var(--muted-dark) hover:bg-[var(--soft)]"
           }`
         }
       >
