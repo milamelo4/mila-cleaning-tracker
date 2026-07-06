@@ -1,4 +1,19 @@
+import { useNavigate } from "react-router-dom";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "../firebase";
+
 function Login() {
+const navigate = useNavigate();
+
+const handleGoogleLogin = async () => {
+  try {
+    await signInWithPopup(auth, googleProvider);
+    navigate("/dashboard");
+  } catch (error) {
+    console.error("Google login failed:", error);
+  }
+};
+
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--cream)] px-4 py-10">
       <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[var(--olive)] opacity-20 blur-3xl" />
@@ -21,6 +36,7 @@ function Login() {
 
         <button
           type="button"
+          onClick={handleGoogleLogin}
           className="flex w-full items-center justify-center gap-3 rounded-full bg-[var(--olive-dark)] py-3 font-semibold text-white shadow-md transition hover:bg-[var(--olive)]"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-sm font-bold text-[var(--olive-dark)]">
