@@ -7,6 +7,7 @@ import Payments from "./pages/Payments";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
 import AddClient from "./pages/AddClient";
+import ClientDetails from "./pages/ClientDetails";
 
 function App() {
   return (
@@ -65,6 +66,17 @@ function App() {
             <ProtectedRoute>
             <MainLayout>
               <AddClient />
+            </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/clients/:clientId"
+          element={
+            <ProtectedRoute>
+            <MainLayout>
+              <ClientDetails />
             </MainLayout>
             </ProtectedRoute>
           }

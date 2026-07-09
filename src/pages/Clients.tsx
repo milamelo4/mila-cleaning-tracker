@@ -111,7 +111,10 @@ function Clients() {
               <span>{client.phone}</span>
             </a>
 
-            <button className="mt-5 w-full rounded-xl bg-[var(--olive-dark)] py-3 font-medium text-white transition hover:bg-[var(--olive)]">
+            <button
+              onClick={() => navigate(`/clients/${client.firestoreId}`)}
+              className="mt-5 w-full rounded-xl bg-[var(--olive-dark)] py-3 font-medium text-white transition hover:bg-[var(--olive)]"
+            >
               View Details
             </button>
           </div>

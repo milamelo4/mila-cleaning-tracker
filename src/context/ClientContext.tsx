@@ -45,6 +45,7 @@ export function ClientProvider({ children }: ClientProviderProps) {
       const snapshot = await getDocs(clientsCollection);
 
       const savedClients = snapshot.docs.map((doc) => ({
+        firestoreId: doc.id,
         ...doc.data(),
       })) as Client[];
 
