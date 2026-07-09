@@ -12,6 +12,16 @@ import {
 } from "lucide-react";
 import { ClientContext } from "../context/ClientContext";
 
+function formatPhoneNumber(phone: string) {
+  const cleaned = phone.replace(/\D/g, "");
+
+  if (cleaned.length === 10) {
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
+  }
+
+  return phone;
+}
+
 function ClientDetails() {
     const navigate = useNavigate();
     const { clientId } = useParams();
@@ -109,7 +119,7 @@ function ClientDetails() {
                     </p>
 
                     <p className="mt-1 break-words font-semibold text-[var(--charcoal)]">
-                    {client.phone || "No phone"}
+                    {formatPhoneNumber(client.phone) || "No phone"}
                     </p>
                 </a>
 
