@@ -76,7 +76,7 @@ function ClientDetails() {
                             Client Profile
                         </p>
 
-                        <h1 className="mt-1 text-3xl font-bold text-[var(--charcoal)]">
+                        <h1 className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
                             {client.name}
                         </h1>
 
