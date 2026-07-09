@@ -6,6 +6,8 @@ export interface Client {
   address: string;
   gateCode: string;
   pricePerCleaning: number;
+  startDate: string;
+  estimatedHours: number;
   frequency: "Weekly" | "Twice Weekly" | "Twice Monthly" | "Monthly" | "As Needed";
   helperNeeded: boolean;
   notes: string;

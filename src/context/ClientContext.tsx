@@ -60,10 +60,16 @@ export function ClientProvider({ children }: ClientProviderProps) {
       throw new Error("You must be logged in to add a client.");
     }
 
-    await addDoc(clientsCollection, client);
+    const docRef = await addDoc(clientsCollection, client);
 
-    setClients((prev) => [...prev, client]);
-  };
+    setClients((prev) => [
+      ...prev,
+      {
+        ...client,
+        firestoreId: docRef.id,
+      },
+    ]);
+      };
 
   return (
     <ClientContext.Provider value={{ clients, addClient }}>

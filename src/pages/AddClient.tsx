@@ -9,9 +9,11 @@ const emptyClient = {
   address: "",
   gateCode: "",
   pricePerCleaning: 0,
+  startDate: "",
+  estimatedHours: 0,
   frequency: "Weekly",
   notes: "",
-} satisfies Omit<Client, "id" | "helperNeeded" | "active">;
+} satisfies Omit<Client, "id" | "helperNeeded" | "active" | "firestoreId">;
 
 function AddClient() {
   const [client, setClient] = useState(emptyClient);
@@ -33,9 +35,11 @@ function AddClient() {
 
     setClient((prevClient) => ({
       ...prevClient,
-      [name]: name === "pricePerCleaning" ? Number(value) : value,
-    }));
-  };
+      [name]: name === "pricePerCleaning" || name === "estimatedHours"
+        ? Number(value)
+        : value,
+      }));
+    };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -142,6 +146,36 @@ function AddClient() {
           />
         </div>
 
+        <div className="mb-4">
+          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+            Start Date
+          </label>
+
+          <input
+            type="date"
+            name="startDate"
+            value={client.startDate}
+            onChange={handleChange}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+            Estimated Hours Per Cleaning
+          </label>
+
+          <input
+            type="number"
+            name="estimatedHours"
+            value={client.estimatedHours}
+            onChange={handleChange}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            placeholder="3"
+            step="0.25"
+          />
+        </div>
+        
         <div className="mb-4">
           <label className="mb-2 block font-medium text-[var(--charcoal)]">
             Frequency
