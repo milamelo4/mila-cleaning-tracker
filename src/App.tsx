@@ -8,6 +8,7 @@ import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
 import AddClient from "./pages/AddClient";
 import ClientDetails from "./pages/ClientDetails";
+import EditClient from "./pages/EditClient.tsx";
 
 function App() {
   return (
@@ -77,6 +78,17 @@ function App() {
             <ProtectedRoute>
             <MainLayout>
               <ClientDetails />
+            </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/clients/:clientId/edit"
+          element={
+            <ProtectedRoute>
+            <MainLayout>
+              <EditClient />
             </MainLayout>
             </ProtectedRoute>
           }

@@ -122,102 +122,95 @@ function Clients() {
       ) : (
         <div className="grid gap-4">
           {clients.map((client) => (
-            <article
-              key={client.firestoreId || client.id}
-              className="group rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-            >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-2xl font-bold text-[var(--charcoal)]">
-                      {client.name}
-                    </h2>
-
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-semibold ${
-                        client.active
-                          ? "bg-[var(--olive-soft)] text-[var(--olive-deep)]"
-                          : "bg-[var(--soft)] text-[var(--muted-dark)]"
-                      }`}
+            <a href="">
+              <article
+                key={client.firestoreId || client.id}
+                className="group rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-xl font-bold text-[var(--charcoal)]">
+                        {client.name}
+                      </h2>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                          client.active
+                            ? "bg-[var(--olive-soft)] text-[var(--olive-deep)]"
+                            : "bg-[var(--soft)] text-[var(--muted-dark)]"
+                        }`}
+                      >
+                        {client.active ? "Active" : "Inactive"}
+                      </span>
+                    </div>
+                    <a
+                      href={`https://maps.apple.com/?q=${encodeURIComponent(
+                        client.address
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      title="Open in Maps"
+                      aria-label={`Open ${client.address} in Maps`}
+                      className="mt-3 flex items-start gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
                     >
-                      {client.active ? "Active" : "Inactive"}
-                    </span>
+                      <MapPin
+                        size={16}
+                        strokeWidth={2}
+                        className="mt-0.5 shrink-0"
+                      />
+                      <span>{client.address}</span>
+                    </a>
                   </div>
-
-                  <a
-                    href={`https://maps.apple.com/?q=${encodeURIComponent(
-                      client.address
-                    )}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="Open in Maps"
-                    aria-label={`Open ${client.address} in Maps`}
-                    className="mt-3 flex items-start gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
+                  <button
+                    onClick={() => navigate(`/clients/${client.firestoreId}`)}
+                    className="rounded-full bg-[var(--cream)] p-3 text-[var(--blue-dark)] transition group-hover:bg-[var(--blue-dark)] group-hover:text-white"
+                    aria-label={`View details for ${client.name}`}
                   >
-                    <MapPin
-                      size={16}
-                      strokeWidth={2}
-                      className="mt-0.5 shrink-0"
-                    />
-                    <span>{client.address}</span>
+                    <ArrowRight size={18} />
+                  </button>
+                </div>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl bg-[var(--cream)] p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
+                      Per Cleaning
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-[var(--blue)]">
+                      <DollarSign size={16} strokeWidth={2} />
+                      <span className="text-xl font-bold">
+                        {client.pricePerCleaning}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-[var(--cream)] p-4">
+                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
+                      Schedule
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-[var(--charcoal)]">
+                      <CalendarDays size={16} strokeWidth={2} />
+                      <span className="font-semibold">{client.frequency}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--border-soft)] pt-4">
+                  <a
+                    href={`tel:${client.phone.replace(/\D/g, "")}`}
+                    className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
+                    title={`Call ${client.name}`}
+                    aria-label={`Call ${client.name} at ${client.phone}`}
+                  >
+                    <Phone size={16} strokeWidth={2} />
+                    <span>{client.phone}</span>
                   </a>
+                  <button
+                    onClick={() => navigate(`/clients/${client.firestoreId}`)}
+                    className="flex items-center gap-1 text-sm font-semibold text-[var(--blue-dark)] transition hover:text-[var(--blue)] hover:underline"
+                  >
+                    View Details
+                    <ArrowRight size={15} />
+                  </button>
                 </div>
-
-                <button
-                  onClick={() => navigate(`/clients/${client.firestoreId}`)}
-                  className="rounded-full bg-[var(--cream)] p-3 text-[var(--blue-dark)] transition group-hover:bg-[var(--blue-dark)] group-hover:text-white"
-                  aria-label={`View details for ${client.name}`}
-                >
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
-                    Per Cleaning
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-2 text-[var(--blue)]">
-                    <DollarSign size={16} strokeWidth={2} />
-                    <span className="text-xl font-bold">
-                      {client.pricePerCleaning}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
-                    Schedule
-                  </p>
-
-                  <div className="mt-2 flex items-center gap-2 text-[var(--charcoal)]">
-                    <CalendarDays size={16} strokeWidth={2} />
-                    <span className="font-semibold">{client.frequency}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--border-soft)] pt-4">
-                <a
-                  href={`tel:${client.phone.replace(/\D/g, "")}`}
-                  className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
-                  title={`Call ${client.name}`}
-                  aria-label={`Call ${client.name} at ${client.phone}`}
-                >
-                  <Phone size={16} strokeWidth={2} />
-                  <span>{client.phone}</span>
-                </a>
-
-                <button
-                  onClick={() => navigate(`/clients/${client.firestoreId}`)}
-                  className="flex items-center gap-1 text-sm font-semibold text-[var(--blue-dark)] transition hover:text-[var(--blue)] hover:underline"
-                >
-                  View Details
-                  <ArrowRight size={15} />
-                </button>
-              </div>
-            </article>
+              </article>
+            </a>
           ))}
         </div>
       )}
