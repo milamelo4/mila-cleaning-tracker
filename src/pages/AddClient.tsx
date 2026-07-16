@@ -62,7 +62,7 @@ function AddClient() {
           Add Client
         </h1>
 
-        <p className="mt-1 text-[var(--muted)]">
+        <p className="mt-1 text-[var(--olive-dark)]">
           Create a new cleaning client.
         </p>
       </div>

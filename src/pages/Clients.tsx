@@ -50,7 +50,7 @@ function Clients() {
       <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive)]">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive-dark)]">
               Client List
             </p>
 
@@ -58,7 +58,7 @@ function Clients() {
               Clients
             </h1>
 
-            <p className="mt-1 text-[var(--muted)]">
+            <p className="mt-1 text-[var(--olive-dark)]">
               Manage your cleaning clients, pricing, and schedule details.
             </p>
           </div>
@@ -74,7 +74,7 @@ function Clients() {
 
         <div className="mt-6 grid grid-cols-3 gap-3">
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
               Total
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -83,7 +83,7 @@ function Clients() {
           </div>
 
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
               Active
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -92,7 +92,7 @@ function Clients() {
           </div>
 
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
               Monthly
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -108,7 +108,7 @@ function Clients() {
             No clients yet
           </p>
 
-          <p className="mt-2 text-[var(--muted)]">
+          <p className="mt-2 text-[var(--charcoal)]">
             Add your first client to start building your cleaning tracker.
           </p>
 
@@ -174,7 +174,7 @@ function Clients() {
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
                     Per Cleaning
                   </p>
 
@@ -187,7 +187,7 @@ function Clients() {
                 </div>
 
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
                     Schedule
                   </p>
 
@@ -211,7 +211,7 @@ function Clients() {
 
                 <button
                   onClick={() => navigate(`/clients/${client.firestoreId}`)}
-                  className="flex items-center gap-1 text-sm font-semibold text-[var(--olive)] transition hover:text-[var(--olive-dark)] hover:underline"
+                  className="flex items-center gap-1 text-sm font-semibold text-[var(--olive-dark)] transition hover:text-[var(--olive)] hover:underline"
                 >
                   View Details
                   <ArrowRight size={15} />

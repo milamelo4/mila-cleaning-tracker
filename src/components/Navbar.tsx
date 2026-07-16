@@ -11,8 +11,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[#606C38] text-white"
-            : "text-[var(--muted-dark) hover:bg-[var(--soft)]"
+            ? "bg-[var(--olive-hover)] text-white"
+            : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
       >
@@ -24,8 +24,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[#606C38] text-white"
-            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
+            ? "bg-[var(--olive-hover)] text-white"
+            : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
       >
@@ -37,8 +37,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[#606C38] text-white"
-            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
+            ? "bg-[var(--olive-hover)] text-white"
+            : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
       >
@@ -50,8 +50,8 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[#606C38] text-white"
-            : "text-[var(--muted-dark) hover:bg-[#EFE7D6]"
+            ? "bg-[var(--olive-hover)] text-white"
+            : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
       >

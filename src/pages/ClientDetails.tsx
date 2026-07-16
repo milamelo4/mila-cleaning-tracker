@@ -53,7 +53,7 @@ function ClientDetails() {
     if (!client) {
         return (
         <div className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-6 shadow-sm">
-            <p className="text-[var(--muted)]">Client not found.</p>
+            <p className="text-[var(--charcoal)]">Client not found.</p>
 
             <button
             onClick={() => navigate("/clients")}
