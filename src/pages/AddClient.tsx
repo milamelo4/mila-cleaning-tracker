@@ -13,6 +13,7 @@ const emptyClient = {
   estimatedHours: 0,
   frequency: "Weekly",
   notes: "",
+  assignedHelpers: [],
 } satisfies Omit<Client, "id" | "helperNeeded" | "active" | "firestoreId">;
 
 function AddClient() {
@@ -48,6 +49,7 @@ function AddClient() {
       id: Date.now(),
       ...client,
       helperNeeded: false,
+      assignedHelpers: client.assignedHelpers,
       active: true,
     });
 

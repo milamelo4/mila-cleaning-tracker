@@ -1,9 +1,12 @@
 import {
   createContext,
+  useContext,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
+
+import { MemberContext } from "./MemberContext";
 
 import {
   collection,
@@ -12,6 +15,8 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
+  query,
+  where,
 } from "firebase/firestore";
 
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -42,25 +47,50 @@ export function ClientProvider({ children }: ClientProviderProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [user] = useAuthState(auth);
 
-  useEffect(() => {
-    const loadClients = async () => {
-      if (!user) {
-        setClients([]);
-        return;
-      }
+  const memberContext = useContext(MemberContext);
 
-      const snapshot = await getDocs(clientsCollection);
+  if (!memberContext) {
+    throw new Error("MemberContext not found");
+  }
 
-      const savedClients = snapshot.docs.map((doc) => ({
-        firestoreId: doc.id,
-        ...doc.data(),
-      })) as Client[];
+  const { role, loadingRole } = memberContext;
 
-      setClients(savedClients);
+useEffect(() => {
+  const loadClients = async () => {
+    if (!user || loadingRole) {
+      return;
+    }
+
+    if (!role) {
+      setClients([]);
+      return;
+    }
+
+    const clientsQuery =
+      role === "admin"
+        ? clientsCollection
+        : query(
+            clientsCollection,
+            where("assignedHelpers", "array-contains", user.uid)
+          );
+
+  const snapshot = await getDocs(clientsQuery);
+
+  const savedClients = snapshot.docs.map((doc) => {
+  const data = doc.data() as Omit<Client, "firestoreId">;
+
+    return {
+      ...data,
+      firestoreId: doc.id,
+      assignedHelpers: data.assignedHelpers ?? [],
     };
+});
 
-    loadClients();
-  }, [user]);
+    setClients(savedClients);
+  };
+
+  loadClients();
+}, [user, role, loadingRole]);
 
   const addClient = async (client: Client) => {
     if (!user) {

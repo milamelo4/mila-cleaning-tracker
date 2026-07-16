@@ -10,6 +10,13 @@ export interface Client {
   estimatedHours: number;
   frequency: "Weekly" | "Twice Weekly" | "Twice Monthly" | "Monthly" | "As Needed";
   helperNeeded: boolean;
+  assignedHelpers: string[];
   notes: string;
   active: boolean;
+}
+
+export interface ClientFinancial {
+  clientId: string;
+  pricePerCleaning: number;
+  startDate: string;
 }
