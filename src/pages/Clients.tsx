@@ -122,7 +122,6 @@ function Clients() {
       ) : (
         <div className="grid gap-4">
           {clients.map((client) => (
-            <a href="">
               <article
                 key={client.firestoreId || client.id}
                 className="group rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
@@ -210,7 +209,6 @@ function Clients() {
                   </button>
                 </div>
               </article>
-            </a>
           ))}
         </div>
       )}
