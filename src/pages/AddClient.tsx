@@ -62,7 +62,7 @@ function AddClient() {
           Add Client
         </h1>
 
-        <p className="mt-1 text-[var(--olive-dark)]">
+        <p className="mt-1 text-[var(--blue-dark)]">
           Create a new cleaning client.
         </p>
       </div>
@@ -212,7 +212,7 @@ function AddClient() {
 
         <button
           type="submit"
-          className="w-full rounded-md bg-[var(--olive-dark)] px-4 py-3 font-medium text-white transition hover:bg-[var(--olive)]"
+          className="w-full rounded-md bg-[var(--blue-dark)] px-4 py-3 font-medium text-white transition hover:bg-[var(--blue)]"
         >
           Save Client
         </button>

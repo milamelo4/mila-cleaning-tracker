@@ -11,7 +11,7 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[var(--olive-hover)] text-white"
+            ? "bg-[var(--blue-hover)] text-white"
             : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
@@ -24,7 +24,7 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[var(--olive-hover)] text-white"
+            ? "bg-[var(--blue-hover)] text-white"
             : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
@@ -37,7 +37,7 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[var(--olive-hover)] text-white"
+            ? "bg-[var(--blue-hover)] text-white"
             : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }
@@ -50,7 +50,7 @@ function Navbar() {
         className={({ isActive }) =>
           `${baseClass} ${
             isActive
-            ? "bg-[var(--olive-hover)] text-white"
+            ? "bg-[var(--blue-hover)] text-white"
             : "text-[var(--muted-dark)] hover:bg-[var(--soft)]"
           }`
         }

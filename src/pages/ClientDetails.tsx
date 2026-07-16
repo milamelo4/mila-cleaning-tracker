@@ -57,7 +57,7 @@ function ClientDetails() {
 
             <button
             onClick={() => navigate("/clients")}
-            className="mt-4 rounded-2xl bg-[var(--olive-dark)] px-4 py-2 font-medium text-white transition hover:bg-[var(--olive-hover)]"
+            className="mt-4 rounded-2xl bg-[var(--blue-dark)] px-4 py-2 font-medium text-white transition hover:bg-[var(--blue-hover)]"
             >
             Back to Clients
             </button>
@@ -69,7 +69,7 @@ function ClientDetails() {
         <div className="space-y-5">
             <button
                 onClick={() => navigate("/clients")}
-                className="text-sm font-semibold text-[var(--olive)] hover:underline"
+                className="text-sm font-semibold text-[var(--blue)] hover:underline"
             >
                 ← Back to Clients
             </button>
@@ -77,12 +77,12 @@ function ClientDetails() {
         <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
             <div className="flex items-start justify-between gap-4">
                 <div className="flex items-start gap-4">
-                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--olive-dark)] text-white">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[var(--blue-dark)] text-white">
                     <UserRound size={26} />
                     </div>
 
                     <div>
-                        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive)]">
+                        <p className="text-sm font-semibold uppercase tracking-wide text-[var(--blue)]">
                             Client Profile
                         </p>
 
@@ -112,7 +112,7 @@ function ClientDetails() {
                     href={`tel:${client.phone.replace(/\D/g, "")}`}
                     className="rounded-2xl bg-[var(--cream)] p-4 transition hover:bg-[var(--olive-soft)]"
                 >
-                    <Phone size={20} className="text-[var(--olive)]" />
+                    <Phone size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Call
@@ -131,7 +131,7 @@ function ClientDetails() {
                     rel="noreferrer"
                     className="rounded-2xl bg-[var(--cream)] p-4 transition hover:bg-[var(--olive-soft)]"
                 >
-                    <MapPin size={20} className="text-[var(--olive)]" />
+                    <MapPin size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Open Map
@@ -145,7 +145,7 @@ function ClientDetails() {
         </section>
 
         <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive)]">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--blue)]">
             Cleaning Info
             </p>
 
@@ -163,7 +163,7 @@ function ClientDetails() {
                 </div>
 
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                    <CalendarDays size={20} className="text-[var(--olive)]" />
+                    <CalendarDays size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Schedule
@@ -175,7 +175,7 @@ function ClientDetails() {
                 </div>
 
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                    <Clock size={20} className="text-[var(--olive)]" />
+                    <Clock size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Hours
@@ -189,7 +189,7 @@ function ClientDetails() {
                 </div>
 
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                    <TrendingUp size={20} className="text-[var(--olive)]" />
+                    <TrendingUp size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Hourly Est.
@@ -203,7 +203,7 @@ function ClientDetails() {
                 </div>
 
                 <div className="col-span-2 rounded-2xl bg-[var(--cream)] p-4">
-                    <CalendarDays size={20} className="text-[var(--olive)]" />
+                    <CalendarDays size={20} className="text-[var(--blue)]" />
 
                     <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
                     Started Working
@@ -217,13 +217,13 @@ function ClientDetails() {
         </section>
 
         <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive)]">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--blue)]">
             Access
             </p>
 
             <div className="mt-4 rounded-2xl bg-[var(--cream)] p-4">
                 <div className="flex items-start gap-3">
-                    <KeyRound size={20} className="mt-0.5 text-[var(--olive)]" />
+                    <KeyRound size={20} className="mt-0.5 text-[var(--blue)]" />
 
                     <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted)]">
@@ -240,9 +240,9 @@ function ClientDetails() {
 
         <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
             <div className="flex items-center gap-2">
-            <StickyNote size={20} className="text-[var(--olive)]" />
+            <StickyNote size={20} className="text-[var(--blue)]" />
 
-                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive)]">
+                <p className="text-sm font-semibold uppercase tracking-wide text-[var(--blue)]">
                     Notes
                 </p>
             </div>

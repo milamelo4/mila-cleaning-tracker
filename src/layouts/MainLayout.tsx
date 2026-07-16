@@ -26,7 +26,7 @@ function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">
-      <header className="bg-[var(--olive-dark)] px-4 py-5 text-white shadow-md">
+      <header className="bg-[var(--blue-dark)] px-4 py-5 text-white shadow-md">
         <div className="mx-auto max-w-6xl">
           <p className="text-sm text-[#EDE6D6]">{currentDate}</p>
 

@@ -50,7 +50,7 @@ function Clients() {
       <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--olive-dark)]">
+            <p className="text-sm font-semibold uppercase tracking-wide text-[var(--blue-dark)]">
               Client List
             </p>
 
@@ -58,14 +58,14 @@ function Clients() {
               Clients
             </h1>
 
-            <p className="mt-1 text-[var(--olive-dark)]">
+            <p className="mt-1 text-[var(--blue-dark)]">
               Manage your cleaning clients, pricing, and schedule details.
             </p>
           </div>
 
           <button
             onClick={() => navigate("/clients/new")}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--olive-dark)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--olive-hover)] sm:w-auto"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--blue-dark)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--blue-hover)] sm:w-auto"
           >
             <Plus size={18} />
             Add Client
@@ -74,7 +74,7 @@ function Clients() {
 
         <div className="mt-6 grid grid-cols-3 gap-3">
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
               Total
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -83,7 +83,7 @@ function Clients() {
           </div>
 
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
               Active
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -92,7 +92,7 @@ function Clients() {
           </div>
 
           <div className="rounded-2xl bg-[var(--cream)] p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
+            <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
               Monthly
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
@@ -114,7 +114,7 @@ function Clients() {
 
           <button
             onClick={() => navigate("/clients/new")}
-            className="mt-5 rounded-2xl bg-[var(--olive-dark)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--olive-hover)]"
+            className="mt-5 rounded-2xl bg-[var(--blue-dark)] px-5 py-3 font-semibold text-white transition hover:bg-[var(--blue-hover)]"
           >
             Add First Client
           </button>
@@ -152,7 +152,7 @@ function Clients() {
                     rel="noreferrer"
                     title="Open in Maps"
                     aria-label={`Open ${client.address} in Maps`}
-                    className="mt-3 flex items-start gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--olive-dark)] hover:underline"
+                    className="mt-3 flex items-start gap-2 text-sm text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
                   >
                     <MapPin
                       size={16}
@@ -165,7 +165,7 @@ function Clients() {
 
                 <button
                   onClick={() => navigate(`/clients/${client.firestoreId}`)}
-                  className="rounded-full bg-[var(--cream)] p-3 text-[var(--olive-dark)] transition group-hover:bg-[var(--olive-dark)] group-hover:text-white"
+                  className="rounded-full bg-[var(--cream)] p-3 text-[var(--blue-dark)] transition group-hover:bg-[var(--blue-dark)] group-hover:text-white"
                   aria-label={`View details for ${client.name}`}
                 >
                   <ArrowRight size={18} />
@@ -174,11 +174,11 @@ function Clients() {
 
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
                     Per Cleaning
                   </p>
 
-                  <div className="mt-2 flex items-center gap-2 text-[var(--olive)]">
+                  <div className="mt-2 flex items-center gap-2 text-[var(--blue)]">
                     <DollarSign size={16} strokeWidth={2} />
                     <span className="text-xl font-bold">
                       {client.pricePerCleaning}
@@ -187,7 +187,7 @@ function Clients() {
                 </div>
 
                 <div className="rounded-2xl bg-[var(--cream)] p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--olive-dark)]">
+                  <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
                     Schedule
                   </p>
 
@@ -201,7 +201,7 @@ function Clients() {
               <div className="mt-5 flex items-center justify-between gap-4 border-t border-[var(--border-soft)] pt-4">
                 <a
                   href={`tel:${client.phone.replace(/\D/g, "")}`}
-                  className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] transition hover:text-[var(--olive-dark)] hover:underline"
+                  className="flex items-center gap-2 text-sm font-medium text-[var(--muted)] transition hover:text-[var(--blue-dark)] hover:underline"
                   title={`Call ${client.name}`}
                   aria-label={`Call ${client.name} at ${client.phone}`}
                 >
@@ -211,7 +211,7 @@ function Clients() {
 
                 <button
                   onClick={() => navigate(`/clients/${client.firestoreId}`)}
-                  className="flex items-center gap-1 text-sm font-semibold text-[var(--olive-dark)] transition hover:text-[var(--olive)] hover:underline"
+                  className="flex items-center gap-1 text-sm font-semibold text-[var(--blue-dark)] transition hover:text-[var(--blue)] hover:underline"
                 >
                   View Details
                   <ArrowRight size={15} />
