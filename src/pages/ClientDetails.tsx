@@ -235,7 +235,7 @@ function ClientDetails() {
                         </p>
                     </div>
 
-                    <div className="col-span-2 rounded-2xl bg-[var(--cream)] p-4">
+                    <div className="rounded-2xl bg-[var(--cream)] p-4">
                         <CalendarDays size={20} className="text-[var(--blue)]" />
 
                         <p className="mt-3 text-xs font-medium uppercase tracking-wide text-[var(--charcoal)]">

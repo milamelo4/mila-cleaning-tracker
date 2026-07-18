@@ -28,19 +28,38 @@ function AddClient() {
   const { addClient } = clientContext;
 
   const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    const { name, value } = e.target;
+  e: React.ChangeEvent<
+    HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+  >
+) => {
+  const { name, value } = e.target;
 
-    setClient((prevClient) => ({
-      ...prevClient,
-      [name]: name === "pricePerCleaning" || name === "estimatedHours"
-        ? Number(value)
-        : value,
-      }));
-    };
+  let formattedValue: string | number = value;
+
+  if (name === "phone") {
+    const numbers = value.replace(/\D/g, "").slice(0, 10);
+
+    if (numbers.length <= 3) {
+      formattedValue = numbers;
+    } else if (numbers.length <= 6) {
+      formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+    } else {
+      formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(
+        3,
+        6
+      )}-${numbers.slice(6)}`;
+    }
+  }
+
+  if (name === "pricePerCleaning" || name === "estimatedHours") {
+    formattedValue = Number(value);
+  }
+
+  setClient((prevClient) => ({
+    ...prevClient,
+    [name]: formattedValue,
+  }));
+};
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
