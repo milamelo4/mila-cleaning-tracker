@@ -1,9 +1,12 @@
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { signInWithPopup } from "firebase/auth";
+import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, googleProvider } from "../firebase";
 
 function Login() {
 const navigate = useNavigate();
+
+const [user, loading] = useAuthState(auth);
 
 const handleGoogleLogin = async () => {
   try {
@@ -14,9 +17,21 @@ const handleGoogleLogin = async () => {
   }
 };
 
+if (loading) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--cream)] px-4 py-10">
-      <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[var(--blue)] opacity-20 blur-3xl" />
+    <div className="flex min-h-screen items-center justify-center bg-[var(--cream)]">
+      <p className="text-[var(--muted)]">Checking login...</p>
+    </div>
+  );
+}
+
+if (user) {
+  return <Navigate to="/dashboard" replace />;
+}
+
+return (
+  <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--cream)] px-4 py-10">
+    <div className="absolute -left-20 top-10 h-56 w-56 rounded-full bg-[var(--blue)] opacity-20 blur-3xl" />
       <div className="absolute -right-20 bottom-10 h-64 w-64 rounded-full bg-[var(--soft)] opacity-80 blur-3xl" />
 
       <div className="relative flex min-h-[430px] w-full max-w-lg flex-col justify-center rounded-3xl border border-[var(--border-soft)] bg-white/70 p-8 shadow-xl backdrop-blur-xl">
