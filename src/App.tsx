@@ -3,6 +3,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
 import Cleanings from "./pages/Cleanings";
+import AddCleaning from "./pages/AddCleaning";
 import Payments from "./pages/Payments";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/Login";
@@ -51,9 +52,20 @@ function App() {
         />
 
         <Route
+          path="/cleanings/new"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+              <AddCleaning />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
           path="/payments"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
             <MainLayout>
               <Payments />
             </MainLayout>
@@ -64,7 +76,7 @@ function App() {
         <Route
           path="/clients/new"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
             <MainLayout>
               <AddClient />
             </MainLayout>
@@ -86,7 +98,7 @@ function App() {
         <Route
           path="/clients/:clientId/edit"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
             <MainLayout>
               <EditClient />
             </MainLayout>

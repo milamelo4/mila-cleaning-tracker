@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   ArrowRight,
   CalendarDays,
-  DollarSign,
+  Clock,
   MapPin,
   Phone,
   Plus,
@@ -171,12 +171,16 @@ function Clients() {
                 <div className="mt-5 grid grid-cols-2 gap-3">
                   <div className="rounded-2xl bg-[var(--cream)] p-4">
                     <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
-                      Per Cleaning
+                      Estimated Hours
                     </p>
+
                     <div className="mt-2 flex items-center gap-2 text-[var(--blue)]">
-                      <DollarSign size={16} strokeWidth={2} />
+                      <Clock size={16} strokeWidth={2} />
+
                       <span className="text-xl font-bold">
-                        {client.pricePerCleaning}
+                        {client.estimatedHours
+                          ? `${client.estimatedHours} hrs`
+                          : "Not added"}
                       </span>
                     </div>
                   </div>

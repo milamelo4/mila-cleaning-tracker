@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import { MemberContext } from "../context/MemberContext";
 import { useNavigate, useParams } from "react-router-dom";
 import {
     CalendarDays,
@@ -30,6 +31,14 @@ function ClientDetails() {
     const navigate = useNavigate();
     const { clientId } = useParams();
     const clientContext = useContext(ClientContext);
+
+    const memberContext = useContext(MemberContext);
+
+    if (!memberContext) {
+        throw new Error("MemberContext not found");
+    }
+
+    const { role } = memberContext;
 
     if (!clientContext) {
         throw new Error("ClientContext not found");
@@ -288,30 +297,32 @@ function ClientDetails() {
                 </div>
             </section>
 
-            <div className="mt-6 flex gap-3">
-                <button
+            {role === "admin" && (
+                <div className="mt-6 flex gap-3">
+                    <button
                     onClick={() => navigate(`/clients/${client.firestoreId}/edit`)}
                     className="w-full rounded-xl bg-[var(--blue-dark)] py-3 font-medium text-white transition hover:bg-[var(--blue)]"
-                >
+                    >
                     Edit Client
-                </button>
+                    </button>
 
-                <button
+                    <button
                     onClick={async () => {
-                    const confirmed = window.confirm(
+                        const confirmed = window.confirm(
                         `Delete ${client.name}? This cannot be undone.`
-                    );
+                        );
 
-                    if (!confirmed || !client.firestoreId) return;
+                        if (!confirmed || !client.firestoreId) return;
 
-                    await deleteClient(client.firestoreId);
-                    navigate("/clients");
+                        await deleteClient(client.firestoreId);
+                        navigate("/clients");
                     }}
                     className="w-full rounded-xl border border-red-700 py-3 font-medium text-red-700 transition hover:bg-red-100"
-                >
+                    >
                     Delete Client
-                </button>
-            </div>
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
