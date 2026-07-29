@@ -32,32 +32,93 @@ function AddCleaning() {
     const { helpers } = memberContext;
     const { addCleaning } = cleaningContext;
 
-    const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
+    const now = new Date();
 
-        if (!clientId || !date || !startTime || estimatedHours <= 0) {
-            alert("Please complete all required fields.");
-            return;
-        }
+    const today = [
+        now.getFullYear(),
+        String(now.getMonth() + 1).padStart(2, "0"),
+        String(now.getDate()).padStart(2, "0"),
+    ].join("-");
 
-        await addCleaning({
-            clientId,
-            date,
-            startTime,
-            estimatedHours,
-            assignedHelpers,
-            status: "Scheduled",
-            notes,
-        });
+   const handleSubmit = async (
+    event: React.FormEvent<HTMLFormElement>
+    ) => {
+    event.preventDefault();
 
-        navigate("/cleanings");
+    const selectedClientExists = clients.some(
+        (client) => client.firestoreId === clientId
+    );
+
+    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
+    const validStartTime = /^([01]\d|2[0-3]):[0-5]\d$/.test(startTime);
+
+    const validHours =
+        Number.isFinite(estimatedHours) &&
+        estimatedHours >= 0.5 &&
+        estimatedHours <= 24;
+
+    const validHelperIds = assignedHelpers.every((helperId) =>
+        helpers.some((helper) => helper.uid === helperId)
+    );
+
+    if (!selectedClientExists) {
+        alert("Please select a valid client.");
+        return;
+    }
+
+    if (!validDate) {
+        alert("Please enter a valid date.");
+        return;
+    }
+
+    if (!validStartTime) {
+        alert("Please enter a valid start time.");
+        return;
+    }
+
+    if (!validHours) {
+        alert("Estimated hours must be between 0.5 and 24.");
+        return;
+    }
+
+    if (!validHelperIds) {
+        alert("One or more selected helpers are invalid.");
+        return;
+    }
+
+    if (date < today) {
+        alert("You cannot schedule a cleaning in the past.");
+        return;
+    }
+
+    await addCleaning({
+        clientId,
+        date,
+        startTime,
+        estimatedHours,
+        assignedHelpers,
+        status: "Scheduled",
+        notes,
+    });
+
+    navigate("/cleanings");
     };
 
     return (
-        <div className="min-h-screen bg-[var(--cream)] mb-6">
+        
+        <div className="mb-6">
+            <div className="mx-auto w-full max-w-2xl">
+                <button
+                    onClick={() => navigate("/cleanings")}
+                    className="text-sm font-semibold text-[var(--blue-dark)] hover:underline mb-4"
+                >
+                    ← Back to Cleanings
+                </button>
+            </div>
+            
             <form
             onSubmit={handleSubmit}
-            className="mx-auto w-full max-w-2xl"
+            className="max-w-2xl rounded-lg border border-[var(--border-soft)] bg-[var(--card)] p-6 shadow"
             >
                 <h1 className="mb-6 text-2xl font-bold text-[var(--charcoal)]">
                     New Cleaning
@@ -71,6 +132,7 @@ function AddCleaning() {
                 <select
                 id="client"
                 value={clientId}
+                required
                 onChange={(event) => setClientId(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
                 >
@@ -94,6 +156,8 @@ function AddCleaning() {
                 id="date"
                 type="date"
                 value={date}
+                required
+                min={today}
                 onChange={(event) => setDate(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
@@ -107,6 +171,7 @@ function AddCleaning() {
                 id="startTime"
                 type="time"
                 value={startTime}
+                required
                 onChange={(event) => setStartTime(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
@@ -120,8 +185,10 @@ function AddCleaning() {
                 id="estimatedHours"
                 type="number"
                 min="0"
+                max="24"
                 step="0.5"
                 value={estimatedHours}
+                required
                 onChange={(event) => setEstimatedHours(Number(event.target.value))}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
@@ -136,6 +203,7 @@ function AddCleaning() {
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 rows={4}
+                maxLength={1000}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <div className="mt-5">
@@ -149,6 +217,7 @@ function AddCleaning() {
                         >
                         <input
                             type="checkbox"
+                            required
                             checked={assignedHelpers.includes(helper.uid)}
                             onChange={(event) => {
                             if (event.target.checked) {

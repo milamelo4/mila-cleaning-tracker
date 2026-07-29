@@ -78,7 +78,15 @@ function AddClient() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mx-auto w-full max-w-2xl">
+                <button
+                    onClick={() => navigate("/clients")}
+                    className="text-sm font-semibold text-[var(--blue-dark)] hover:underline mb-4"
+                >
+                    ← Back to Clients
+                </button>
+            </div>
+      <div className="mb-6 ">
         <h1 className="text-3xl font-bold text-[var(--charcoal)]">
           Add Client
         </h1>
