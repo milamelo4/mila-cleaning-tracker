@@ -106,7 +106,7 @@ function AddCleaning() {
 
     return (
         
-        <div className="mb-6">
+        <div>
             <div className="mx-auto w-full max-w-2xl">
                 <button
                     onClick={() => navigate("/cleanings")}
@@ -159,7 +159,7 @@ function AddCleaning() {
                 required
                 min={today}
                 onChange={(event) => setDate(event.target.value)}
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <label
                 htmlFor="startTime"
@@ -173,7 +173,7 @@ function AddCleaning() {
                 value={startTime}
                 required
                 onChange={(event) => setStartTime(event.target.value)}
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <label
                 htmlFor="estimatedHours"
@@ -190,7 +190,7 @@ function AddCleaning() {
                 value={estimatedHours}
                 required
                 onChange={(event) => setEstimatedHours(Number(event.target.value))}
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <label
                 htmlFor="notes"
@@ -204,7 +204,7 @@ function AddCleaning() {
                 onChange={(event) => setNotes(event.target.value)}
                 rows={4}
                 maxLength={1000}
-                className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <div className="mt-5">
                     <p className="mb-2 font-medium text-[var(--charcoal)]">
