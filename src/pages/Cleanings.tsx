@@ -1,12 +1,18 @@
-import { useContext } from "react";
-import { Link } from "react-router-dom";
+import { useContext, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   MapPin,
   Phone,
   Timer,
   Trash2,
+  UserRound,
+  KeyRound,
+  MessageSquareText,
+  Pencil,
 } from "lucide-react";
 
 import { CleaningContext } from "../context/CleaningContext";
@@ -14,9 +20,19 @@ import { ClientContext } from "../context/ClientContext";
 import { MemberContext } from "../context/MemberContext";
 
 function Cleanings() {
+  const navigate = useNavigate();
   const cleaningContext = useContext(CleaningContext);
   const clientContext = useContext(ClientContext);
   const memberContext = useContext(MemberContext);
+
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const today = new Date();
+
+    return {
+      year: today.getFullYear(),
+      month: today.getMonth(),
+    };
+  });
 
   if (!cleaningContext) {
     throw new Error("CleaningContext not found");
@@ -32,23 +48,96 @@ function Cleanings() {
 
   const { cleanings, deleteCleaning } = cleaningContext;
   const { clients } = clientContext;
-  const { role } = memberContext;
+  const { role, helpers } = memberContext;
+
+  const selectedMonthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(new Date(selectedMonth.year, selectedMonth.month, 1));
+
+  const selectedMonthPrefix = `${selectedMonth.year}-${String(
+    selectedMonth.month + 1
+  ).padStart(2, "0")}`;
+
+  const monthCleanings = cleanings.filter((cleaning) =>
+    cleaning.date.startsWith(selectedMonthPrefix)
+  );
+
+  const totalEstimatedHours = monthCleanings.reduce(
+    (total, cleaning) =>
+      cleaning.status === "Cancelled"
+        ? total
+        : total + cleaning.estimatedHours,
+    0
+  );
+
+  const totalAppointments = monthCleanings.filter(
+    (cleaning) => cleaning.status !== "Cancelled"
+  ).length;
 
   const getClientById = (clientId: string) =>
     clients.find((client) => client.firestoreId === clientId);
 
-  const sortedCleanings = [...cleanings].sort((a, b) => {
-  const first = `${a.date}T${a.startTime}`;
-  const second = `${b.date}T${b.startTime}`;
+  const sortedCleanings = [...monthCleanings].sort((a, b) => {
+    const first = `${a.date}T${a.startTime}`;
+    const second = `${b.date}T${b.startTime}`;
 
-  return first.localeCompare(second);
-});
+    return first.localeCompare(second);
+  });
+
+  const goToPreviousMonth = () => {
+    setSelectedMonth((current) => {
+      const date = new Date(current.year, current.month - 1, 1);
+
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+      };
+    });
+  };
+
+  const goToNextMonth = () => {
+    setSelectedMonth((current) => {
+      const date = new Date(current.year, current.month + 1, 1);
+
+      return {
+        year: date.getFullYear(),
+        month: date.getMonth(),
+      };
+    });
+  };
+
+  const formatDateHeading = (date: string) =>
+    new Intl.DateTimeFormat("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+  }).format(new Date(`${date}T00:00:00`));
+
+  const groupedCleanings = sortedCleanings.reduce<
+    Record<string, typeof sortedCleanings>
+  >((groups, cleaning) => {
+    if (!groups[cleaning.date]) {
+      groups[cleaning.date] = [];
+    }
+
+    groups[cleaning.date].push(cleaning);
+
+    return groups;
+  }, {});
+
+  const getAssignedHelperEmails = (assignedHelperIds: string[]) =>
+  assignedHelperIds
+    .map((helperId) =>
+      helpers.find((helper) => helper.uid === helperId)?.email
+    )
+    .filter((email): email is string => Boolean(email));
 
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-[var(--charcoal)]">
-          Cleanings ({cleanings.length})
+          Appointments for {selectedMonthLabel}
         </h1>
 
         {role === "admin" && (
@@ -61,94 +150,217 @@ function Cleanings() {
         )}
       </div>
 
-      <div className="space-y-4">
-        {sortedCleanings.map((cleaning) => {
-          const client = getClientById(cleaning.clientId);
+      <div className="mb-4 flex items-center justify-between rounded-2xl bg-[var(--cream)] p-3">
+        <button
+          type="button"
+          onClick={goToPreviousMonth}
+          className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
+        >
+          <ChevronLeft size={18} />
+          Previous
+        </button>
 
-          return (
-            <div
-              key={cleaning.firestoreId}
-              className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
-            >
-              <p className="text-lg font-semibold text-[var(--charcoal)]">
-                {client?.name ?? "Client unavailable"}
-              </p>
+        <span className="font-semibold text-[var(--charcoal)]">
+          {selectedMonthLabel}
+        </span>
 
-              {client?.address ? (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                    client.address
-                  )}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-2 flex items-center gap-2 text-[var(--blue-dark)]"
-                >
-                  <MapPin size={16} />
-                  <span>{client.address}</span>
-                </a>
-              ) : (
-                <p className="mt-2 flex items-center gap-2 text-[var(--muted)]">
-                  <MapPin size={16} />
-                  <span>No address</span>
-                </p>
-              )}
-
-              <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
-                <Phone size={16} />
-
-                {client?.phone ? (
-                  <a
-                    href={`tel:${client.phone}`}
-                    className="text-[var(--blue-dark)]"
-                  >
-                    {client.phone}
-                  </a>
-                ) : (
-                  <span>No phone number</span>
-                )}
-              </p>
-
-              <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
-                <CalendarDays size={16} />
-                <span>{cleaning.date}</span>
-              </p>
-
-              <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
-                <Clock size={16} />
-                <span>{cleaning.startTime}</span>
-              </p>
-
-              <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
-                <Timer size={18} />
-                <span>{cleaning.estimatedHours} hours</span>
-              </p>
-
-              {role === "admin" && cleaning.firestoreId && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                const firestoreId = cleaning.firestoreId;
-
-                if (!firestoreId) return;
-
-                const confirmed = window.confirm(
-                  "Delete this cleaning? This cannot be undone."
-                );
-
-                if (!confirmed) return;
-
-                await deleteCleaning(firestoreId);
-              }}
-                  className="mt-4 flex items-center gap-2 text-sm font-medium text-red-700 hover:underline"
-                >
-                  <Trash2 size={16} />
-                  Delete Cleaning
-                </button>
-              )}
-            </div>
-          );
-        })}
+        <button
+          type="button"
+          onClick={goToNextMonth}
+          className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
+        >
+          Next
+          <ChevronRight size={18} />
+        </button>
       </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
+            Appointments
+          </p>
+
+          <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
+            {totalAppointments}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
+            Estimated Hours
+          </p>
+
+          <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
+            {totalEstimatedHours}
+          </p>
+        </div>
+      </div>
+
+      {sortedCleanings.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[var(--border-soft)] bg-white p-8 text-center">
+          <p className="font-semibold text-[var(--charcoal)]">
+            No appointments scheduled for {selectedMonthLabel}.
+          </p>
+        </div>
+      ) : (
+      <div className="space-y-6">
+        {Object.entries(groupedCleanings).map(
+          ([date, dateCleanings]) => (
+            <section key={date}>
+              <h2 className="flex items-center gap-2 text-lg font-bold text-[var(--charcoal)]">
+                <CalendarDays size={18} />
+                {formatDateHeading(date)}
+              </h2>
+
+              <div className="mt-3 space-y-4">
+                {dateCleanings.map((cleaning) => {
+                  const client = getClientById(cleaning.clientId);
+
+                  const assignedHelperEmails = getAssignedHelperEmails(
+                  cleaning.assignedHelpers
+                  );
+
+                  return (
+                    <div
+                      key={cleaning.firestoreId}
+                      className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
+                    >
+                      <p className="text-lg font-semibold text-[var(--charcoal)]">
+                        {client?.name ?? "Client unavailable"}
+                      </p>
+
+                      {client?.address ? (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            client.address
+                          )}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-2 flex items-center gap-2 text-[var(--blue-dark)]"
+                        >
+                          <MapPin size={16} />
+                          <span>{client.address}</span>
+                        </a>
+                      ) : (
+                        <p className="mt-2 flex items-center gap-2 text-[var(--muted)]">
+                          <MapPin size={16} />
+                          <span>No address</span>
+                        </p>
+                      )}
+
+                      <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
+                        <Phone size={16} />
+
+                        {client?.phone ? (
+                          <a href={`tel:${client.phone}`}>
+                            {client.phone}
+                          </a>
+                        ) : (
+                          <span>No phone number</span>
+                        )}
+                      </p>
+
+                      {client?.gateCode && (
+                      <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
+                        <KeyRound size={18} />
+                        <span>Gate/Garage: {client.gateCode}</span>
+                      </p>
+                      )}
+
+                      {(client?.notes || cleaning.notes) && (
+                      <div className="mt-2 flex items-start gap-2 text-[var(--blue-dark)]">
+                        <MessageSquareText size={18} className="mt-0.5 shrink-0" />
+
+                        <div>
+                          {client?.notes && (
+                            <p>
+                              <span className="font-medium">Client notes:</span>{" "}
+                              {client.notes}
+                            </p>
+                          )}
+
+                          {cleaning.notes && (
+                            <p>
+                              <span className="font-medium">Appointment notes:</span>{" "}
+                              {cleaning.notes}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      )}
+
+                      <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
+                        <Clock size={16} />
+                        <span>{cleaning.startTime}</span>
+                      </p>
+
+                      <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
+                        <Timer size={18} />
+                        <span>
+                          {cleaning.estimatedHours}{" "}
+                          {cleaning.estimatedHours === 1
+                            ? "hour"
+                            : "hours"}
+                        </span>
+                      </p>
+
+                      {role === "admin" && (
+                        <p className="mt-1 flex items-start gap-2 text-[var(--blue-dark)]">
+                          <UserRound size={18} className="mt-0.5 shrink-0" />
+
+                          <span>
+                            {assignedHelperEmails.length > 0
+                              ? assignedHelperEmails.join(", ")
+                              : "No helper assigned"}
+                          </span>
+                        </p>
+                      )}
+
+                      {role === "admin" && cleaning.firestoreId && (
+                      <div className="mt-4 flex flex-wrap gap-4">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/cleanings/${cleaning.firestoreId}/edit`
+                            )
+                          }
+                          className="flex items-center gap-2 text-sm font-medium text-[var(--blue-dark)] hover:underline"
+                        >
+                        <Pencil size={16} />
+                        Edit Cleaning
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const firestoreId = cleaning.firestoreId;
+
+                          if (!firestoreId) return;
+
+                          const confirmed = window.confirm(
+                            "Delete this cleaning? This cannot be undone."
+                          );
+
+                          if (!confirmed) return;
+
+                          await deleteCleaning(firestoreId);
+                        }}
+                        className="flex items-center gap-2 text-sm font-medium text-red-700 hover:underline"
+                      >
+                        <Trash2 size={16} />
+                        Delete Cleaning
+                      </button>
+                      </div>
+)}                  </div>
+                  );
+                })}
+              </div>
+            </section>
+          )
+        )}
+      </div>
+    )}
     </div>
   );
 }

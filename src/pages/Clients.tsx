@@ -45,6 +45,16 @@ function Clients() {
     return total + getMonthlyEstimate(client);
   }, 0);
 
+  const sortedClients = [...clients].sort((a, b) => {
+    if (a.active !== b.active) {
+      return a.active ? -1 : 1;
+    }
+
+    return a.name.localeCompare(b.name, undefined, {
+      sensitivity: "base",
+    });
+  });
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm">
@@ -121,7 +131,7 @@ function Clients() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {clients.map((client) => (
+          {sortedClients.map((client) => (
               <article
                 key={client.firestoreId || client.id}
                 className="group rounded-3xl border border-[var(--border-soft)] bg-[var(--card)] p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"

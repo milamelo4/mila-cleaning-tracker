@@ -10,7 +10,7 @@ import Login from "./pages/Login";
 import AddClient from "./pages/AddClient";
 import ClientDetails from "./pages/ClientDetails";
 import EditClient from "./pages/EditClient.tsx";
-
+import EditCleaning from "./pages/EditCleaning";
 function App() {
   return (
     <BrowserRouter>
@@ -103,6 +103,19 @@ function App() {
               <EditClient />
             </MainLayout>
             </ProtectedRoute>
+          }
+        />
+      </Routes>
+
+      <Routes>
+        <Route
+          path="/cleanings/:cleaningId/edit"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+            <MainLayout>
+              <EditCleaning />
+            </MainLayout>
+            </ProtectedRoute>   
           }
         />
       </Routes>
