@@ -34,15 +34,33 @@ function EditClient() {
   ) => {
     const { name, value } = e.target;
 
+    let formattedValue: string | number = value;
+
+    if (name === "phone") {
+      const numbers = value.replace(/\D/g, "").slice(0, 10);
+
+      if (numbers.length <= 3) {
+        formattedValue = numbers;
+      } else if (numbers.length <= 6) {
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
+      } else {
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(
+          3,
+          6
+        )}-${numbers.slice(6)}`;
+      }
+    }
+
+    if (name === "pricePerCleaning" || name === "estimatedHours") {
+      formattedValue = Number(value);
+    }
+
     setClient((prevClient) => {
       if (!prevClient) return prevClient;
 
       return {
         ...prevClient,
-        [name]:
-          name === "pricePerCleaning" || name === "estimatedHours"
-            ? Number(value)
-            : value,
+        [name]: formattedValue,
       };
     });
   };
@@ -50,7 +68,81 @@ function EditClient() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    await updateClient(client);
+    const name = client.name.trim();
+    const address = client.address.trim();
+    const gateCode = client.gateCode.trim();
+    const notes = client.notes.trim();
+    const phoneDigits = client.phone.replace(/\D/g, "");
+
+    const validFrequencies = [
+      "Weekly",
+      "Twice Weekly",
+      "Twice Monthly",
+      "Monthly",
+      "As Needed",
+    ];
+
+    if (name.length < 2 || name.length > 100) {
+      alert("Client name must be between 2 and 100 characters.");
+      return;
+    }
+
+    if (phoneDigits.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+      return;
+    }
+
+    if (address.length < 5 || address.length > 200) {
+      alert("Please enter a valid address.");
+      return;
+    }
+
+    if (gateCode.length > 50) {
+      alert("Gate or garage code must be 50 characters or fewer.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(client.pricePerCleaning) ||
+      client.pricePerCleaning < 0.01 ||
+      client.pricePerCleaning > 10000
+    ) {
+      alert("Price must be between $0.01 and $10,000.");
+      return;
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(client.startDate)) {
+      alert("Please enter a valid start date.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(client.estimatedHours) ||
+      client.estimatedHours < 0.25 ||
+      client.estimatedHours > 24
+    ) {
+      alert("Estimated hours must be between 0.25 and 24.");
+      return;
+    }
+
+    if (!validFrequencies.includes(client.frequency)) {
+      alert("Please select a valid frequency.");
+      return;
+    }
+
+    if (notes.length > 1000) {
+      alert("Notes must be 1,000 characters or fewer.");
+      return;
+    }
+
+    await updateClient({
+      ...client,
+      name,
+      address,
+      gateCode,
+      notes,
+    });
+
     navigate(`/clients/${client.firestoreId}`);
   };
 
@@ -62,7 +154,7 @@ function EditClient() {
         </h1>
 
         <p className="mt-1 text-[var(--blue-dark)]">
-          Update this client’s information.
+          Update this client's information.
         </p>
       </div>
 
@@ -76,12 +168,15 @@ function EditClient() {
           </label>
 
           <input
-            type="text"
-            name="name"
-            value={client.name}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
-          />
+          type="text"
+          name="name"
+          value={client.name}
+          onChange={handleChange}
+          required
+          minLength={2}
+          maxLength={100}
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
+         />
         </div>
 
         <div className="mb-4">
@@ -90,12 +185,16 @@ function EditClient() {
           </label>
 
           <input
-            type="tel"
-            name="phone"
-            value={client.phone}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
-          />
+          type="tel"
+          name="phone"
+          value={client.phone}
+          onChange={handleChange}
+          required
+          inputMode="tel"
+          pattern="\(\d{3}\) \d{3}-\d{4}"
+          maxLength={14}
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
+         />
         </div>
 
         <div className="mb-4">
@@ -104,11 +203,14 @@ function EditClient() {
           </label>
 
           <input
-            type="text"
-            name="address"
-            value={client.address}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+          type="text"
+          name="address"
+          value={client.address}
+          onChange={handleChange}
+          required
+          minLength={5}
+          maxLength={200}
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
@@ -118,11 +220,12 @@ function EditClient() {
           </label>
 
           <input
-            type="text"
-            name="gateCode"
-            value={client.gateCode}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+          type="text"
+          name="gateCode"
+          value={client.gateCode}
+          onChange={handleChange}
+          maxLength={50}
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
@@ -132,11 +235,15 @@ function EditClient() {
           </label>
 
           <input
-            type="number"
-            name="pricePerCleaning"
-            value={client.pricePerCleaning}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+          type="number"
+          name="pricePerCleaning"
+          value={client.pricePerCleaning}
+          onChange={handleChange}
+          required
+          min="0.01"
+          max="10000"
+          step="0.01"
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
@@ -146,11 +253,12 @@ function EditClient() {
           </label>
 
           <input
-            type="date"
-            name="startDate"
-            value={client.startDate}
-            onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+          type="date"
+          name="startDate"
+          value={client.startDate}
+          onChange={handleChange}
+          required
+          className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
@@ -160,13 +268,16 @@ function EditClient() {
           </label>
 
           <input
-            type="number"
-            name="estimatedHours"
-            value={client.estimatedHours}
-            onChange={handleChange}
-            step="0.25"
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
-          />
+          type="number"
+          name="estimatedHours"
+          value={client.estimatedHours}
+          onChange={handleChange}
+          required
+          min="0.25"
+          max="24"
+          step="0.25"
+          className="w-full rounded-md border border-[var(--border-soft)] p-3"
+         />
         </div>
 
         <div className="mb-4">
@@ -196,6 +307,7 @@ function EditClient() {
           <textarea
             rows={4}
             name="notes"
+            maxLength={1000}
             value={client.notes}
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"

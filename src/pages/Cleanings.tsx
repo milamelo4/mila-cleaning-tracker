@@ -6,6 +6,7 @@ import {
   MapPin,
   Phone,
   Timer,
+  Trash2,
 } from "lucide-react";
 
 import { CleaningContext } from "../context/CleaningContext";
@@ -29,7 +30,7 @@ function Cleanings() {
     throw new Error("MemberContext not found");
   }
 
-  const { cleanings } = cleaningContext;
+  const { cleanings, deleteCleaning } = cleaningContext;
   const { clients } = clientContext;
   const { role } = memberContext;
 
@@ -121,6 +122,29 @@ function Cleanings() {
                 <Timer size={18} />
                 <span>{cleaning.estimatedHours} hours</span>
               </p>
+
+              {role === "admin" && cleaning.firestoreId && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                const firestoreId = cleaning.firestoreId;
+
+                if (!firestoreId) return;
+
+                const confirmed = window.confirm(
+                  "Delete this cleaning? This cannot be undone."
+                );
+
+                if (!confirmed) return;
+
+                await deleteCleaning(firestoreId);
+              }}
+                  className="mt-4 flex items-center gap-2 text-sm font-medium text-red-700 hover:underline"
+                >
+                  <Trash2 size={16} />
+                  Delete Cleaning
+                </button>
+              )}
             </div>
           );
         })}
