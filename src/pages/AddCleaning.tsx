@@ -159,7 +159,7 @@ function AddCleaning() {
                 required
                 min={today}
                 onChange={(event) => setDate(event.target.value)}
-                className="block w-full min-w-0 max-w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <label
                 htmlFor="startTime"
@@ -173,7 +173,7 @@ function AddCleaning() {
                 value={startTime}
                 required
                 onChange={(event) => setStartTime(event.target.value)}
-                className="block w-full min-w-0 max-w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
+                className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
                 <label
                 htmlFor="estimatedHours"
