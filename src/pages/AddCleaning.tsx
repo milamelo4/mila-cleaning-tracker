@@ -30,7 +30,7 @@ function AddCleaning() {
 
     const { clients } = clientContext;
     const { helpers } = memberContext;
-    const { addCleaning } = cleaningContext;
+    const { addCleaning, cleanings } = cleaningContext;
 
     const now = new Date();
 
@@ -39,6 +39,13 @@ function AddCleaning() {
         String(now.getMonth() + 1).padStart(2, "0"),
         String(now.getDate()).padStart(2, "0"),
     ].join("-");
+
+    const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(":").map(Number);
+
+    return hours * 60 + minutes;
+    };
+
 
    const handleSubmit = async (
     event: React.FormEvent<HTMLFormElement>
@@ -59,6 +66,13 @@ function AddCleaning() {
 
     const validHelperIds = assignedHelpers.every((helperId) =>
         helpers.some((helper) => helper.uid === helperId)
+    );
+
+    const sameClientSameDay = cleanings.some(
+  (cleaning) =>
+    cleaning.clientId === clientId &&
+    cleaning.date === date &&
+    cleaning.status !== "Cancelled"
     );
 
     if (!selectedClientExists) {
@@ -91,6 +105,32 @@ function AddCleaning() {
         return;
     }
 
+    if (sameClientSameDay) {
+        alert("This client already has a cleaning scheduled for this date.");
+        return;
+    }
+
+    const newStart = timeToMinutes(startTime);
+    const newEnd = newStart + estimatedHours * 60;
+
+    const overlappingCleaning = cleanings.some((cleaning) => {
+    if (cleaning.date !== date || cleaning.status === "Cancelled") {
+        return false;
+    }
+
+    const existingStart = timeToMinutes(cleaning.startTime);
+    const existingEnd =
+        existingStart + cleaning.estimatedHours * 60;
+
+        return newStart < existingEnd && newEnd > existingStart;
+    });
+
+    if (overlappingCleaning) {
+        alert(
+        "This cleaning overlaps with another cleaning on the same date. Please choose a different time."
+        );
+        return;
+    }
     await addCleaning({
         clientId,
         date,
@@ -184,11 +224,11 @@ function AddCleaning() {
                 <input
                 id="estimatedHours"
                 type="number"
-                min="0"
+                min="0.5"
+                required
                 max="24"
                 step="0.5"
                 value={estimatedHours}
-                required
                 onChange={(event) => setEstimatedHours(Number(event.target.value))}
                 className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
                 />
@@ -216,8 +256,7 @@ function AddCleaning() {
                         className="mb-2 flex items-center gap-3"
                         >
                         <input
-                            type="checkbox"
-                            required
+                            type="checkbox"                       
                             checked={assignedHelpers.includes(helper.uid)}
                             onChange={(event) => {
                             if (event.target.checked) {

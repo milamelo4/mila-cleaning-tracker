@@ -36,6 +36,13 @@ function Cleanings() {
   const getClientById = (clientId: string) =>
     clients.find((client) => client.firestoreId === clientId);
 
+  const sortedCleanings = [...cleanings].sort((a, b) => {
+  const first = `${a.date}T${a.startTime}`;
+  const second = `${b.date}T${b.startTime}`;
+
+  return first.localeCompare(second);
+});
+
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="mb-6 flex items-center justify-between gap-4">
@@ -54,7 +61,7 @@ function Cleanings() {
       </div>
 
       <div className="space-y-4">
-        {cleanings.map((cleaning) => {
+        {sortedCleanings.map((cleaning) => {
           const client = getClientById(cleaning.clientId);
 
           return (
