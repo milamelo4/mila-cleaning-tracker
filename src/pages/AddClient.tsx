@@ -204,7 +204,6 @@ function AddClient() {
           placeholder="(801) 555-1234"
           required
           inputMode="tel"
-          pattern="\(\d{3}\) \d{3}-\d{4}"
           maxLength={14}
         />
         </div>

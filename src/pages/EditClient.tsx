@@ -191,7 +191,6 @@ function EditClient() {
           onChange={handleChange}
           required
           inputMode="tel"
-          pattern="\(\d{3}\) \d{3}-\d{4}"
           maxLength={14}
           className="w-full rounded-md border border-[var(--border-soft)] p-3"
          />
