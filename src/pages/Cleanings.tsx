@@ -149,7 +149,7 @@ function Cleanings() {
         {role === "admin" && (
           <Link
             to="/cleanings/new"
-            className="rounded-xl bg-[var(--blue-dark)] px-3 py-3 font-medium text-white transition hover:bg-[var(--blue)]"
+            className="rounded-xl bg-[var(--blue-dark)] px-3 py-3 font-medium text-white transition hover:bg-[var(--blue)] text-sm flex items-center gap-2"
           >
             New Cleaning
           </Link>
