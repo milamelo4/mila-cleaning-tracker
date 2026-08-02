@@ -7,7 +7,6 @@ import {
 } from "react";
 
 import {
-  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -15,6 +14,7 @@ import {
   query,
   updateDoc,
   where,
+  writeBatch,
 } from "firebase/firestore";
 
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -25,6 +25,7 @@ import type { Cleaning } from "../types/cleaning";
 type CleaningContextType = {
   cleanings: Cleaning[];
   addCleaning: (cleaning: Cleaning) => Promise<void>;
+  addCleanings: (cleanings: Cleaning[]) => Promise<void>;
   updateCleaning: (cleaning: Cleaning) => Promise<void>;
   deleteCleaning: (firestoreId: string) => Promise<void>;
 };
@@ -43,7 +44,23 @@ const cleaningsCollection = collection(
   "cleanings"
 );
 
-export function CleaningProvider({ children }: CleaningProviderProps) {
+const getCleaningData = (
+  cleaning: Cleaning
+): Omit<Cleaning, "firestoreId"> => {
+  return {
+    clientId: cleaning.clientId,
+    date: cleaning.date,
+    startTime: cleaning.startTime,
+    estimatedHours: cleaning.estimatedHours,
+    assignedHelpers: cleaning.assignedHelpers,
+    status: cleaning.status,
+    notes: cleaning.notes,
+  };
+};
+
+export function CleaningProvider({
+  children,
+}: CleaningProviderProps) {
   const [cleanings, setCleanings] = useState<Cleaning[]>([]);
   const [user] = useAuthState(auth);
 
@@ -71,23 +88,29 @@ export function CleaningProvider({ children }: CleaningProviderProps) {
           ? cleaningsCollection
           : query(
               cleaningsCollection,
-              where("assignedHelpers", "array-contains", user.uid)
+              where(
+                "assignedHelpers",
+                "array-contains",
+                user.uid
+              )
             );
 
       const snapshot = await getDocs(cleaningsQuery);
 
-      const savedCleanings = snapshot.docs.map((cleaningDoc) => {
-        const data = cleaningDoc.data() as Omit<
-          Cleaning,
-          "firestoreId"
-        >;
+      const savedCleanings = snapshot.docs.map(
+        (cleaningDoc) => {
+          const data = cleaningDoc.data() as Omit<
+            Cleaning,
+            "firestoreId"
+          >;
 
-        return {
-          ...data,
-          firestoreId: cleaningDoc.id,
-          assignedHelpers: data.assignedHelpers ?? [],
-        };
-      });
+          return {
+            ...data,
+            firestoreId: cleaningDoc.id,
+            assignedHelpers: data.assignedHelpers ?? [],
+          };
+        }
+      );
 
       setCleanings(savedCleanings);
     };
@@ -95,30 +118,60 @@ export function CleaningProvider({ children }: CleaningProviderProps) {
     loadCleanings();
   }, [user, role, loadingRole]);
 
-  const addCleaning = async (cleaning: Cleaning) => {
+  const addCleanings = async (
+    newCleanings: Cleaning[]
+  ) => {
     if (!user) {
-      throw new Error("You must be logged in to add a cleaning.");
+      throw new Error(
+        "You must be logged in to add cleanings."
+      );
     }
 
-    const { firestoreId, ...cleaningData } = cleaning;
-    const docRef = await addDoc(cleaningsCollection, cleaningData);
+    if (newCleanings.length === 0) {
+      return;
+    }
+
+    const batch = writeBatch(db);
+
+    const savedCleanings = newCleanings.map(
+      (cleaning) => {
+        const cleaningDoc = doc(cleaningsCollection);
+        const cleaningData = getCleaningData(cleaning);
+
+        batch.set(cleaningDoc, cleaningData);
+
+        return {
+          ...cleaning,
+          firestoreId: cleaningDoc.id,
+        };
+      }
+    );
+
+    await batch.commit();
 
     setCleanings((previousCleanings) => [
       ...previousCleanings,
-      {
-        ...cleaning,
-        firestoreId: docRef.id,
-      },
+      ...savedCleanings,
     ]);
   };
 
-  const updateCleaning = async (cleaning: Cleaning) => {
+  const addCleaning = async (cleaning: Cleaning) => {
+    await addCleanings([cleaning]);
+  };
+
+  const updateCleaning = async (
+    cleaning: Cleaning
+  ) => {
     if (!user) {
-      throw new Error("You must be logged in to update a cleaning.");
+      throw new Error(
+        "You must be logged in to update a cleaning."
+      );
     }
 
     if (!cleaning.firestoreId) {
-      throw new Error("Cleaning Firestore ID is missing.");
+      throw new Error(
+        "Cleaning Firestore ID is missing."
+      );
     }
 
     const cleaningDoc = doc(
@@ -129,22 +182,27 @@ export function CleaningProvider({ children }: CleaningProviderProps) {
       cleaning.firestoreId
     );
 
-    const { firestoreId, ...cleaningData } = cleaning;
+    const cleaningData = getCleaningData(cleaning);
 
     await updateDoc(cleaningDoc, cleaningData);
 
     setCleanings((previousCleanings) =>
       previousCleanings.map((savedCleaning) =>
-        savedCleaning.firestoreId === firestoreId
+        savedCleaning.firestoreId ===
+        cleaning.firestoreId
           ? cleaning
           : savedCleaning
       )
     );
   };
 
-  const deleteCleaning = async (firestoreId: string) => {
+  const deleteCleaning = async (
+    firestoreId: string
+  ) => {
     if (!user) {
-      throw new Error("You must be logged in to delete a cleaning.");
+      throw new Error(
+        "You must be logged in to delete a cleaning."
+      );
     }
 
     const cleaningDoc = doc(
@@ -159,7 +217,8 @@ export function CleaningProvider({ children }: CleaningProviderProps) {
 
     setCleanings((previousCleanings) =>
       previousCleanings.filter(
-        (cleaning) => cleaning.firestoreId !== firestoreId
+        (cleaning) =>
+          cleaning.firestoreId !== firestoreId
       )
     );
   };
@@ -169,6 +228,7 @@ export function CleaningProvider({ children }: CleaningProviderProps) {
       value={{
         cleanings,
         addCleaning,
+        addCleanings,
         updateCleaning,
         deleteCleaning,
       }}
