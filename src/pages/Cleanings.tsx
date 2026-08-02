@@ -141,15 +141,15 @@ function Cleanings() {
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <h1 className="text-1xl font-bold text-[var(--charcoal)]">
-          Appointments for {selectedMonthLabel}
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-[var(--charcoal)]">
+          {selectedMonthLabel}
         </h1>
 
         {role === "admin" && (
           <Link
             to="/cleanings/new"
-            className="rounded-xl bg-[var(--blue-dark)] px-3 py-3 font-medium text-white transition hover:bg-[var(--blue)] text-sm flex items-center gap-2"
+            className="rounded-xl bg-[var(--blue-dark)] px-3 py-3 font-medium text-white transition hover:bg-[var(--blue)] text-md flex items-center gap-2"
           >
             New Cleaning
           </Link>
