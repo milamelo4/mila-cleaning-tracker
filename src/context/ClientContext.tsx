@@ -25,6 +25,7 @@ import type { Client } from "../types/client";
 
 type ClientContextType = {
   clients: Client[];
+  loadingClients: boolean;
   addClient: (client: Client) => Promise<void>;
   updateClient: (client: Client) => Promise<void>;
   deleteClient: (firestoreId: string) => Promise<void>;
@@ -45,6 +46,7 @@ const clientsCollection = collection(
 
 export function ClientProvider({ children }: ClientProviderProps) {
   const [clients, setClients] = useState<Client[]>([]);
+  const [loadingClients, setLoadingClients] = useState(true);
   const [user] = useAuthState(auth);
 
   const memberContext = useContext(MemberContext);
@@ -57,14 +59,17 @@ export function ClientProvider({ children }: ClientProviderProps) {
 
 useEffect(() => {
   const loadClients = async () => {
-    if (!user || loadingRole) {
+    if (loadingRole) {
       return;
     }
 
-    if (!role) {
+    if (!user || !role) {
       setClients([]);
+      setLoadingClients(false);
       return;
     }
+
+    setLoadingClients(true);
 
     const clientsQuery =
       role === "admin"
@@ -87,6 +92,7 @@ useEffect(() => {
 });
 
     setClients(savedClients);
+    setLoadingClients(false);
   };
 
   loadClients();
@@ -117,6 +123,10 @@ useEffect(() => {
       throw new Error("Client Firestore ID is missing.");
     }
 
+    if (!Number.isInteger(client.id)) {
+      throw new Error("Client ID must be an integer.");
+    }
+
     const clientDoc = doc(
       db,
       "businesses",
@@ -125,14 +135,31 @@ useEffect(() => {
       client.firestoreId
     );
 
-    const { firestoreId, ...clientData } = client;
-
+    const clientData = {
+      id: client.id,
+      name: client.name.trim(),
+      phone: client.phone,
+      address: client.address.trim(),
+      gateCode: client.gateCode.trim(),
+      pricePerCleaning: Number(client.pricePerCleaning),
+      startDate: client.startDate,
+      estimatedHours: Number(client.estimatedHours),
+      frequency: client.frequency,
+      helperNeeded: Boolean(client.helperNeeded),
+      assignedHelpers: client.assignedHelpers ?? [],
+      notes: client.notes.trim(),
+      active: Boolean(client.active),
+    };
+    console.log("CLIENT DATA BEING SAVED:", clientData);
     await updateDoc(clientDoc, clientData);
 
-    setClients((prev) =>
-      prev.map((savedClient) =>
-        savedClient.firestoreId === firestoreId
-          ? client
+    setClients((previousClients) =>
+      previousClients.map((savedClient) =>
+        savedClient.firestoreId === client.firestoreId
+          ? {
+              ...client,
+              ...clientData,
+            }
           : savedClient
       )
     );
@@ -159,7 +186,15 @@ useEffect(() => {
   };
 
   return (
-    <ClientContext.Provider value={{ clients, addClient, updateClient, deleteClient }}>
+    <ClientContext.Provider
+    value={{
+    clients,
+    loadingClients,
+    addClient,
+    updateClient,
+    deleteClient,
+  }}
+>
       {children}
     </ClientContext.Provider>
   );

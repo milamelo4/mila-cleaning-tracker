@@ -1,5 +1,4 @@
-import { useContext, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";import { useNavigate, useParams } from "react-router-dom";
 import { ClientContext } from "../context/ClientContext";
 
 function EditClient() {
@@ -11,13 +10,27 @@ function EditClient() {
     throw new Error("ClientContext not found");
   }
 
-  const { clients, updateClient } = clientContext;
+ const { clients, loadingClients, updateClient } = clientContext;
 
   const selectedClient = clients.find(
-    (client) => client.firestoreId === clientId
+    (savedClient) => savedClient.firestoreId === clientId
   );
 
   const [client, setClient] = useState(selectedClient);
+
+  useEffect(() => {
+    if (selectedClient) {
+      setClient(selectedClient);
+    }
+  }, [selectedClient]);
+
+  if (loadingClients) {
+    return (
+      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
+        <p className="text-[var(--muted)]">Loading client...</p>
+      </div>
+    );
+  }
 
   if (!client) {
     return (

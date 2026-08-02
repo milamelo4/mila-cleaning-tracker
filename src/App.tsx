@@ -1,16 +1,19 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import ProtectedRoute from "./components/ProtectedRoute";
+import MainLayout from "./layouts/MainLayout";
+
+import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Clients from "./pages/Clients";
-import Cleanings from "./pages/Cleanings";
-import AddCleaning from "./pages/AddCleaning";
-import Payments from "./pages/Payments";
-import MainLayout from "./layouts/MainLayout";
-import Login from "./pages/Login";
 import AddClient from "./pages/AddClient";
 import ClientDetails from "./pages/ClientDetails";
-import EditClient from "./pages/EditClient.tsx";
+import EditClient from "./pages/EditClient";
+import Cleanings from "./pages/Cleanings";
+import AddCleaning from "./pages/AddCleaning";
 import EditCleaning from "./pages/EditCleaning";
+import Payments from "./pages/Payments";
+
 function App() {
   return (
     <BrowserRouter>
@@ -22,9 +25,9 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-            <MainLayout>
-              <Dashboard />
-            </MainLayout>
+              <MainLayout>
+                <Dashboard />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -33,9 +36,42 @@ function App() {
           path="/clients"
           element={
             <ProtectedRoute>
-            <MainLayout>
-              <Clients />
-            </MainLayout>
+              <MainLayout>
+                <Clients />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/clients/new"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+                <AddClient />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/clients/:clientId"
+          element={
+            <ProtectedRoute>
+              <MainLayout>
+                <ClientDetails />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/clients/:clientId/edit"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+                <EditClient />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -44,9 +80,9 @@ function App() {
           path="/cleanings"
           element={
             <ProtectedRoute>
-            <MainLayout>
-              <Cleanings />
-            </MainLayout>
+              <MainLayout>
+                <Cleanings />
+              </MainLayout>
             </ProtectedRoute>
           }
         />
@@ -56,7 +92,18 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
               <MainLayout>
-              <AddCleaning />
+                <AddCleaning />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/cleanings/:cleaningId/edit"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+                <EditCleaning />
               </MainLayout>
             </ProtectedRoute>
           }
@@ -66,56 +113,10 @@ function App() {
           path="/payments"
           element={
             <ProtectedRoute allowedRoles={["admin"]}>
-            <MainLayout>
-              <Payments />
-            </MainLayout>
+              <MainLayout>
+                <Payments />
+              </MainLayout>
             </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/clients/new"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-            <MainLayout>
-              <AddClient />
-            </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/clients/:clientId"
-          element={
-            <ProtectedRoute>
-            <MainLayout>
-              <ClientDetails />
-            </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="/clients/:clientId/edit"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-            <MainLayout>
-              <EditClient />
-            </MainLayout>
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
-
-      <Routes>
-        <Route
-          path="/cleanings/:cleaningId/edit"
-          element={
-            <ProtectedRoute allowedRoles={["admin"]}>
-            <MainLayout>
-              <EditCleaning />
-            </MainLayout>
-            </ProtectedRoute>   
           }
         />
       </Routes>

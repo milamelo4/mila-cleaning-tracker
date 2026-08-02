@@ -1,4 +1,5 @@
 import PaymentForm from "../components/PaymentForm";
+import PaymentList from "../components/PaymentList";
 
 function Payments() {
   return (
@@ -14,6 +15,7 @@ function Payments() {
       </div>
 
       <PaymentForm />
+      <PaymentList />
     </div>
   );
 }

@@ -73,13 +73,13 @@ function PaymentForm() {
   ].join("-");
 
   const availableCleanings = cleanings
-    .filter((cleaning) => {
-      if (
-        !cleaning.firestoreId ||
-        cleaning.status === "Cancelled"
-      ) {
-        return false;
-      }
+  .filter((cleaning) => {
+    if (
+      !cleaning.firestoreId ||
+      cleaning.status !== "Completed"
+    ) {
+      return false;
+    }
 
       return !payments.some(
         (payment) =>
@@ -369,11 +369,15 @@ function PaymentForm() {
             step="0.01"
             value={amountCharged}
             required
-            onChange={(event) =>
-              setAmountCharged(
-                Number(event.target.value)
-              )
-            }
+            onChange={(event) => {
+                const newAmount = Number(event.target.value);
+
+                setAmountCharged(newAmount);
+
+                if (selectedCleaning.assignedHelpers.length > 0) {
+                    setHelperPayout(newAmount / 2);
+                }
+            }}
             className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
           />
 
