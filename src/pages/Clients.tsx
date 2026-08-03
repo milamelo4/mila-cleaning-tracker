@@ -103,7 +103,7 @@ function Clients() {
 
           <div className="rounded-2xl bg-[var(--cream)] p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
-              Monthly
+              Monthly Revenue 
             </p>
             <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
               ${monthlyEstimate}
