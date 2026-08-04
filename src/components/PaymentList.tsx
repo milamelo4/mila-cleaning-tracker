@@ -373,6 +373,7 @@ function PaymentList() {
                         min="0.01"
                         max="10000"
                         step="0.01"
+                        onWheel={(event) => event.currentTarget.blur()}
                         value={editedPayment.amountCharged}
                         onChange={(event) =>
                           setEditedPayment({
@@ -394,6 +395,7 @@ function PaymentList() {
                         min="0.25"
                         max="24"
                         step="0.25"
+                        onWheel={(event) => event.currentTarget.blur()}
                         value={editedPayment.actualHours}
                         onChange={(event) =>
                           setEditedPayment({
@@ -415,6 +417,7 @@ function PaymentList() {
                         min="0"
                         max={editedPayment.amountCharged}
                         step="0.01"
+                        onWheel={(event) => event.currentTarget.blur()}
                         value={editedPayment.helperPayout}
                         onChange={(event) =>
                           setEditedPayment({

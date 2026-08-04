@@ -367,6 +367,7 @@ function PaymentForm() {
             min="0.01"
             max="10000"
             step="0.01"
+            onWheel={(event) => event.currentTarget.blur()}
             value={amountCharged}
             required
             onChange={(event) => {
@@ -396,6 +397,7 @@ function PaymentForm() {
             step="0.25"
             value={actualHours}
             required
+            onWheel={(event) => event.currentTarget.blur()}
             onChange={(event) =>
               setActualHours(
                 Number(event.target.value)
@@ -422,6 +424,7 @@ function PaymentForm() {
             min="0"
             max={amountCharged || 0}
             step="0.01"
+            onWheel={(event) => event.currentTarget.blur()}
             value={helperPayout}
             required
             onChange={(event) =>

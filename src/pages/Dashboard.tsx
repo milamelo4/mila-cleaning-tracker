@@ -64,7 +64,7 @@ function MetricCard({
             {label}
           </p>
 
-          <p className="mt-2 text-2xl font-bold text-[var(--charcoal)]">
+          <p className="mt-2 text-xl font-bold text-[var(--charcoal)]">
             {value}
           </p>
 
@@ -75,8 +75,8 @@ function MetricCard({
           )}
         </div>
 
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--cream)] text-[var(--blue-dark)]">
-          <Icon size={20} />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--cream)] text-[var(--blue-dark)]">
+          <Icon size={16} />
         </div>
       </div>
     </div>
@@ -448,9 +448,7 @@ function Dashboard() {
               </h2>
 
               <p className="mt-1 text-sm text-[var(--muted)]">
-                Based on cleanings currently in the schedule. Helper jobs
-                use a 50/50 estimate unless a payment record already has
-                the actual payout.
+                Based on the current schedule. Helper jobs use an estimated 50/50 split.
               </p>
             </div>
 

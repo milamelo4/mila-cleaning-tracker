@@ -366,6 +366,7 @@ function AddCleaning() {
           step="0.5"
           value={estimatedHours}
           required
+          onWheel={(event) => event.currentTarget.blur()}
           onChange={(event) =>
             setEstimatedHours(
               Number(event.target.value)
