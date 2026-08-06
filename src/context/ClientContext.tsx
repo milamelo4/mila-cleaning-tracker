@@ -12,6 +12,7 @@ import {
   collection,
   addDoc,
   doc,
+  getDoc,
   getDocs,
   updateDoc,
   deleteDoc,
@@ -31,7 +32,8 @@ type ClientContextType = {
   deleteClient: (firestoreId: string) => Promise<void>;
 };
 
-export const ClientContext = createContext<ClientContextType | null>(null);
+export const ClientContext =
+  createContext<ClientContextType | null>(null);
 
 type ClientProviderProps = {
   children: ReactNode;
@@ -44,7 +46,16 @@ const clientsCollection = collection(
   "clients"
 );
 
-export function ClientProvider({ children }: ClientProviderProps) {
+const cleaningsCollection = collection(
+  db,
+  "businesses",
+  "mila-cleaning-tracker",
+  "cleanings"
+);
+
+export function ClientProvider({
+  children,
+}: ClientProviderProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingClients, setLoadingClients] = useState(true);
   const [user] = useAuthState(auth);
@@ -57,56 +68,129 @@ export function ClientProvider({ children }: ClientProviderProps) {
 
   const { role, loadingRole } = memberContext;
 
-useEffect(() => {
-  const loadClients = async () => {
-    if (loadingRole) {
-      return;
-    }
+  useEffect(() => {
+    const loadClients = async () => {
+      if (loadingRole) {
+        return;
+      }
 
-    if (!user || !role) {
-      setClients([]);
-      setLoadingClients(false);
-      return;
-    }
+      if (!user || !role) {
+        setClients([]);
+        setLoadingClients(false);
+        return;
+      }
 
-    setLoadingClients(true);
+      setLoadingClients(true);
 
-    const clientsQuery =
-      role === "admin"
-        ? clientsCollection
-        : query(
-            clientsCollection,
-            where("assignedHelpers", "array-contains", user.uid)
+      try {
+        if (role === "admin") {
+          const snapshot = await getDocs(clientsCollection);
+
+          const savedClients = snapshot.docs.map(
+            (clientDocument) => {
+              const data = clientDocument.data() as Omit<
+                Client,
+                "firestoreId"
+              >;
+
+              return {
+                ...data,
+                firestoreId: clientDocument.id,
+                assignedHelpers: data.assignedHelpers ?? [],
+              };
+            }
           );
 
-  const snapshot = await getDocs(clientsQuery);
+          setClients(savedClients);
+          return;
+        }
 
-  const savedClients = snapshot.docs.map((doc) => {
-  const data = doc.data() as Omit<Client, "firestoreId">;
+        const helperCleaningsQuery = query(
+          cleaningsCollection,
+          where(
+            "assignedHelpers",
+            "array-contains",
+            user.uid
+          )
+        );
 
-    return {
-      ...data,
-      firestoreId: doc.id,
-      assignedHelpers: data.assignedHelpers ?? [],
+        const cleaningSnapshot = await getDocs(
+          helperCleaningsQuery
+        );
+
+        const clientIds = Array.from(
+          new Set(
+            cleaningSnapshot.docs
+              .map((cleaningDocument) => {
+                const data = cleaningDocument.data();
+
+                return typeof data.clientId === "string"
+                  ? data.clientId
+                  : "";
+              })
+              .filter((clientId) => clientId.length > 0)
+          )
+        );
+
+        const clientSnapshots = await Promise.all(
+          clientIds.map((clientId) =>
+            getDoc(
+              doc(
+                db,
+                "businesses",
+                "mila-cleaning-tracker",
+                "clients",
+                clientId
+              )
+            )
+          )
+        );
+
+        const helperClients: Client[] = [];
+
+        clientSnapshots.forEach((clientDocument) => {
+          if (!clientDocument.exists()) {
+            return;
+          }
+
+          const data = clientDocument.data() as Omit<
+            Client,
+            "firestoreId"
+          >;
+
+          helperClients.push({
+            ...data,
+            firestoreId: clientDocument.id,
+            assignedHelpers: data.assignedHelpers ?? [],
+          });
+        });
+
+        setClients(helperClients);
+      } catch (error) {
+        console.error("Failed to load clients:", error);
+        setClients([]);
+      } finally {
+        setLoadingClients(false);
+      }
     };
-});
 
-    setClients(savedClients);
-    setLoadingClients(false);
-  };
-
-  loadClients();
-}, [user, role, loadingRole]);
+    void loadClients();
+  }, [user, role, loadingRole]);
 
   const addClient = async (client: Client) => {
     if (!user) {
-      throw new Error("You must be logged in to add a client.");
+      throw new Error(
+        "You must be logged in to add a client."
+      );
     }
 
-    const docRef = await addDoc(clientsCollection, client);
+    const docRef = await addDoc(
+      clientsCollection,
+      client
+    );
 
-    setClients((prev) => [
-      ...prev,
+    setClients((previousClients) => [
+      ...previousClients,
       {
         ...client,
         firestoreId: docRef.id,
@@ -116,18 +200,24 @@ useEffect(() => {
 
   const updateClient = async (client: Client) => {
     if (!user) {
-      throw new Error("You must be logged in to update a client.");
+      throw new Error(
+        "You must be logged in to update a client."
+      );
     }
 
     if (!client.firestoreId) {
-      throw new Error("Client Firestore ID is missing.");
+      throw new Error(
+        "Client Firestore ID is missing."
+      );
     }
 
     if (!Number.isInteger(client.id)) {
-      throw new Error("Client ID must be an integer.");
+      throw new Error(
+        "Client ID must be an integer."
+      );
     }
 
-    const clientDoc = doc(
+    const clientDocument = doc(
       db,
       "businesses",
       "mila-cleaning-tracker",
@@ -141,21 +231,27 @@ useEffect(() => {
       phone: client.phone,
       address: client.address.trim(),
       gateCode: client.gateCode.trim(),
-      pricePerCleaning: Number(client.pricePerCleaning),
+      pricePerCleaning: Number(
+        client.pricePerCleaning
+      ),
       startDate: client.startDate,
-      estimatedHours: Number(client.estimatedHours),
+      estimatedHours: Number(
+        client.estimatedHours
+      ),
       frequency: client.frequency,
       helperNeeded: Boolean(client.helperNeeded),
-      assignedHelpers: client.assignedHelpers ?? [],
+      assignedHelpers:
+        client.assignedHelpers ?? [],
       notes: client.notes.trim(),
       active: Boolean(client.active),
     };
-    console.log("CLIENT DATA BEING SAVED:", clientData);
-    await updateDoc(clientDoc, clientData);
+
+    await updateDoc(clientDocument, clientData);
 
     setClients((previousClients) =>
       previousClients.map((savedClient) =>
-        savedClient.firestoreId === client.firestoreId
+        savedClient.firestoreId ===
+        client.firestoreId
           ? {
               ...client,
               ...clientData,
@@ -165,12 +261,16 @@ useEffect(() => {
     );
   };
 
-  const deleteClient = async (firestoreId: string) => {
+  const deleteClient = async (
+    firestoreId: string
+  ) => {
     if (!user) {
-      throw new Error("You must be logged in to delete a client.");
+      throw new Error(
+        "You must be logged in to delete a client."
+      );
     }
 
-    const clientDoc = doc(
+    const clientDocument = doc(
       db,
       "businesses",
       "mila-cleaning-tracker",
@@ -178,23 +278,26 @@ useEffect(() => {
       firestoreId
     );
 
-    await deleteDoc(clientDoc);
+    await deleteDoc(clientDocument);
 
-    setClients((prev) =>
-      prev.filter((client) => client.firestoreId !== firestoreId)
+    setClients((previousClients) =>
+      previousClients.filter(
+        (client) =>
+          client.firestoreId !== firestoreId
+      )
     );
   };
 
   return (
     <ClientContext.Provider
-    value={{
-    clients,
-    loadingClients,
-    addClient,
-    updateClient,
-    deleteClient,
-  }}
->
+      value={{
+        clients,
+        loadingClients,
+        addClient,
+        updateClient,
+        deleteClient,
+      }}
+    >
       {children}
     </ClientContext.Provider>
   );

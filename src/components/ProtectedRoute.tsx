@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuthState } from "react-firebase-hooks/auth";
 
@@ -8,7 +8,7 @@ import { MemberContext } from "../context/MemberContext";
 type MemberRole = "admin" | "helper";
 
 type ProtectedRouteProps = {
-  children: React.ReactNode;
+  children: ReactNode;
   allowedRoles?: MemberRole[];
 };
 
@@ -28,7 +28,9 @@ function ProtectedRoute({
   if (loadingUser || loadingRole) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[var(--cream)]">
-        <p className="text-[var(--muted)]">Checking access...</p>
+        <p className="text-[var(--muted)]">
+          Checking access...
+        </p>
       </div>
     );
   }
@@ -37,8 +39,30 @@ function ProtectedRoute({
     return <Navigate to="/" replace />;
   }
 
-  if (allowedRoles && (!role || !allowedRoles.includes(role))) {
-    return <Navigate to="/dashboard" replace />;
+  if (!role) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[var(--cream)]">
+        <p className="text-[var(--muted)]">
+          Your account does not have access yet.
+        </p>
+      </div>
+    );
+  }
+
+  if (
+    allowedRoles &&
+    !allowedRoles.includes(role)
+  ) {
+    return (
+      <Navigate
+        to={
+          role === "helper"
+            ? "/cleanings"
+            : "/dashboard"
+        }
+        replace
+      />
+    );
   }
 
   return children;

@@ -74,11 +74,11 @@ export function CleaningProvider({
 
   useEffect(() => {
     const loadCleanings = async () => {
-      if (!user || loadingRole) {
+      if (loadingRole) {
         return;
       }
 
-      if (!role) {
+      if (!user || !role) {
         setCleanings([]);
         return;
       }
@@ -127,8 +127,14 @@ export function CleaningProvider({
       );
     }
 
-    if (newCleanings.length === 0) {
-      return;
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can add cleanings."
+      );
+    }
+
+    if (newCleanings.length === 0) {    
+        return
     }
 
     const batch = writeBatch(db);
@@ -168,13 +174,19 @@ export function CleaningProvider({
       );
     }
 
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can update cleanings."
+      );
+    }
+
     if (!cleaning.firestoreId) {
       throw new Error(
         "Cleaning Firestore ID is missing."
       );
     }
 
-    const cleaningDoc = doc(
+  const cleaningDoc = doc(
       db,
       "businesses",
       "mila-cleaning-tracker",
@@ -202,6 +214,12 @@ export function CleaningProvider({
     if (!user) {
       throw new Error(
         "You must be logged in to delete a cleaning."
+      );
+    }
+
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can delete cleanings."
       );
     }
 

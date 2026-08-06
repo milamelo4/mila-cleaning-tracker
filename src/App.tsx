@@ -24,7 +24,7 @@ function App() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <MainLayout>
                 <Dashboard />
               </MainLayout>
@@ -35,7 +35,7 @@ function App() {
         <Route
           path="/clients"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <MainLayout>
                 <Clients />
               </MainLayout>
@@ -57,7 +57,7 @@ function App() {
         <Route
           path="/clients/:clientId"
           element={
-            <ProtectedRoute>
+            <ProtectedRoute allowedRoles={["admin"]}>
               <MainLayout>
                 <ClientDetails />
               </MainLayout>
