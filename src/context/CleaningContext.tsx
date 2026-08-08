@@ -49,6 +49,11 @@ const getCleaningData = (
 ): Omit<Cleaning, "firestoreId"> => {
   return {
     clientId: cleaning.clientId,
+    clientName: cleaning.clientName,
+    clientPhone: cleaning.clientPhone,
+    clientAddress: cleaning.clientAddress,
+    clientGateCode: cleaning.clientGateCode,
+    clientNotes: cleaning.clientNotes,
     date: cleaning.date,
     startTime: cleaning.startTime,
     estimatedHours: cleaning.estimatedHours,
@@ -99,23 +104,32 @@ export function CleaningProvider({
 
       const savedCleanings = snapshot.docs.map(
         (cleaningDoc) => {
-          const data = cleaningDoc.data() as Omit<
-            Cleaning,
-            "firestoreId"
+          const data = cleaningDoc.data() as Partial<
+            Omit<Cleaning, "firestoreId">
           >;
 
           return {
-            ...data,
-            firestoreId: cleaningDoc.id,
+            clientId: data.clientId ?? "",
+            clientName: data.clientName ?? "",
+            clientPhone: data.clientPhone ?? "",
+            clientAddress: data.clientAddress ?? "",
+            clientGateCode: data.clientGateCode ?? "",
+            clientNotes: data.clientNotes ?? "",
+            date: data.date ?? "",
+            startTime: data.startTime ?? "",
+            estimatedHours: data.estimatedHours ?? 0,
             assignedHelpers: data.assignedHelpers ?? [],
-          };
+            status: data.status ?? "Scheduled",
+            notes: data.notes ?? "",
+            firestoreId: cleaningDoc.id,
+          } satisfies Cleaning;
         }
       );
 
       setCleanings(savedCleanings);
     };
 
-    loadCleanings();
+    void loadCleanings();
   }, [user, role, loadingRole]);
 
   const addCleanings = async (
@@ -133,8 +147,8 @@ export function CleaningProvider({
       );
     }
 
-    if (newCleanings.length === 0) {    
-        return
+    if (newCleanings.length === 0) {
+      return;
     }
 
     const batch = writeBatch(db);
@@ -186,7 +200,7 @@ export function CleaningProvider({
       );
     }
 
-  const cleaningDoc = doc(
+    const cleaningDoc = doc(
       db,
       "businesses",
       "mila-cleaning-tracker",

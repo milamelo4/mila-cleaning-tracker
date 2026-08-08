@@ -117,7 +117,7 @@ function AddCleaning() {
     event.preventDefault();
     setErrorMessage("");
 
-    const selectedClientExists = clients.some(
+    const selectedClient = clients.find(
       (client) => client.firestoreId === clientId
     );
 
@@ -136,7 +136,7 @@ function AddCleaning() {
         helpers.some((helper) => helper.uid === helperId)
     );
 
-    if (!selectedClientExists) {
+    if (!selectedClient) {
       alert("Please select a valid client.");
       return;
     }
@@ -232,6 +232,11 @@ function AddCleaning() {
     const newCleanings: Cleaning[] =
       appointmentDates.map((appointmentDate) => ({
         clientId,
+        clientName: selectedClient.name,
+        clientPhone: selectedClient.phone,
+        clientAddress: selectedClient.address,
+        clientGateCode: selectedClient.gateCode,
+        clientNotes: selectedClient.notes,
         date: appointmentDate,
         startTime,
         estimatedHours,

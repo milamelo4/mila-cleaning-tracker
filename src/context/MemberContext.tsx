@@ -4,6 +4,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+
 import {
   collection,
   doc,
@@ -30,7 +31,8 @@ type MemberContextType = {
   helpers: Member[];
 };
 
-export const MemberContext = createContext<MemberContextType | null>(null);
+export const MemberContext =
+  createContext<MemberContextType | null>(null);
 
 type MemberProviderProps = {
   children: ReactNode;
@@ -43,77 +45,123 @@ const membersCollection = collection(
   "members"
 );
 
-export function MemberProvider({ children }: MemberProviderProps) {
+const isMemberRole = (
+  value: unknown
+): value is MemberRole =>
+  value === "admin" || value === "helper";
+
+export function MemberProvider({
+  children,
+}: MemberProviderProps) {
   const [user, loadingUser] = useAuthState(auth);
-  const [role, setRole] = useState<MemberRole | null>(null);
-  const [loadingRole, setLoadingRole] = useState(true);
-  const [helpers, setHelpers] = useState<Member[]>([]);
+  const [role, setRole] =
+    useState<MemberRole | null>(null);
+  const [loadingRole, setLoadingRole] =
+    useState(true);
+  const [helpers, setHelpers] =
+    useState<Member[]>([]);
 
   useEffect(() => {
     const loadRole = async () => {
       if (loadingUser) {
         return;
       }
+
       if (!user) {
         setRole(null);
+        setHelpers([]);
         setLoadingRole(false);
         return;
       }
 
       setLoadingRole(true);
 
-      const memberDoc = doc(
-        db,
-        "businesses",
-        "mila-cleaning-tracker",
-        "members",
-        user.uid
-      );
+      try {
+        const memberDocument = doc(
+          db,
+          "businesses",
+          "mila-cleaning-tracker",
+          "members",
+          user.uid
+        );
 
-      const snapshot = await getDoc(memberDoc);
+        const snapshot = await getDoc(
+          memberDocument
+        );
 
-      if (!snapshot.exists()) {
-        setRole(null);
-        setLoadingRole(false);
-        return;
-      }
+        if (!snapshot.exists()) {
+          setRole(null);
+          setHelpers([]);
+          return;
+        }
 
-      const memberData = snapshot.data();
-      const currentRole = memberData.role as MemberRole;
+        const memberData = snapshot.data();
+        const currentRole = memberData.role;
 
-      setRole(currentRole);
+        if (!isMemberRole(currentRole)) {
+          setRole(null);
+          setHelpers([]);
+          return;
+        }
 
-      if (currentRole === "admin") {
+        setRole(currentRole);
+
+        if (currentRole !== "admin") {
+          setHelpers([]);
+          return;
+        }
+
         const helpersQuery = query(
           membersCollection,
           where("role", "==", "helper")
         );
 
-      const helpersSnapshot = await getDocs(helpersQuery);
+        const helpersSnapshot =
+          await getDocs(helpersQuery);
 
-      const savedHelpers = helpersSnapshot.docs.map((helperDoc) => {
-      const helperData = helperDoc.data() as Omit<Member, "uid">;
+        const savedHelpers =
+          helpersSnapshot.docs.map(
+            (helperDocument) => {
+              const helperData =
+                helperDocument.data();
 
-      return {
-        ...helperData,
-        uid: helperDoc.id,
-      };
-    });
+              return {
+                uid: helperDocument.id,
+                email:
+                  typeof helperData.email ===
+                  "string"
+                    ? helperData.email
+                    : "",
+                role: "helper" as const,
+              };
+            }
+          );
 
-    setHelpers(savedHelpers);
-  } else {
-    setHelpers([]);
-  }
-
-  setLoadingRole(false);
+        setHelpers(savedHelpers);
+      } catch (error) {
+        console.error(
+          "Failed to load member access:",
+          error
+        );
+        setRole(null);
+        setHelpers([]);
+      } finally {
+        setLoadingRole(false);
+      }
     };
 
-      loadRole();
-    }, [user, loadingUser]);
+    void loadRole();
+  }, [user, loadingUser]);
 
-    return (
-      <MemberContext.Provider value={{ role, loadingRole, helpers }}>
-        {children}
-      </MemberContext.Provider>
-    );
+  return (
+    <MemberContext.Provider
+      value={{
+        role,
+        loadingRole,
+        helpers,
+      }}
+    >
+      {children}
+    </MemberContext.Provider>
+  );
 }

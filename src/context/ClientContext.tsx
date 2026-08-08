@@ -9,15 +9,12 @@ import {
 import { MemberContext } from "./MemberContext";
 
 import {
-  collection,
   addDoc,
+  collection,
+  deleteDoc,
   doc,
-  getDoc,
   getDocs,
   updateDoc,
-  deleteDoc,
-  query,
-  where,
 } from "firebase/firestore";
 
 import { useAuthState } from "react-firebase-hooks/auth";
@@ -44,13 +41,6 @@ const clientsCollection = collection(
   "businesses",
   "mila-cleaning-tracker",
   "clients"
-);
-
-const cleaningsCollection = collection(
-  db,
-  "businesses",
-  "mila-cleaning-tracker",
-  "cleanings"
 );
 
 export function ClientProvider({
@@ -80,94 +70,42 @@ export function ClientProvider({
         return;
       }
 
+      if (role !== "admin") {
+        setClients([]);
+        setLoadingClients(false);
+        return;
+      }
+
       setLoadingClients(true);
 
       try {
-        if (role === "admin") {
-          const snapshot = await getDocs(clientsCollection);
+        const snapshot = await getDocs(
+          clientsCollection
+        );
 
-          const savedClients = snapshot.docs.map(
-            (clientDocument) => {
-              const data = clientDocument.data() as Omit<
+        const savedClients = snapshot.docs.map(
+          (clientDocument) => {
+            const data =
+              clientDocument.data() as Omit<
                 Client,
                 "firestoreId"
               >;
 
-              return {
-                ...data,
-                firestoreId: clientDocument.id,
-                assignedHelpers: data.assignedHelpers ?? [],
-              };
-            }
-          );
-
-          setClients(savedClients);
-          return;
-        }
-
-        const helperCleaningsQuery = query(
-          cleaningsCollection,
-          where(
-            "assignedHelpers",
-            "array-contains",
-            user.uid
-          )
-        );
-
-        const cleaningSnapshot = await getDocs(
-          helperCleaningsQuery
-        );
-
-        const clientIds = Array.from(
-          new Set(
-            cleaningSnapshot.docs
-              .map((cleaningDocument) => {
-                const data = cleaningDocument.data();
-
-                return typeof data.clientId === "string"
-                  ? data.clientId
-                  : "";
-              })
-              .filter((clientId) => clientId.length > 0)
-          )
-        );
-
-        const clientSnapshots = await Promise.all(
-          clientIds.map((clientId) =>
-            getDoc(
-              doc(
-                db,
-                "businesses",
-                "mila-cleaning-tracker",
-                "clients",
-                clientId
-              )
-            )
-          )
-        );
-
-        const helperClients: Client[] = [];
-
-        clientSnapshots.forEach((clientDocument) => {
-          if (!clientDocument.exists()) {
-            return;
+            return {
+              ...data,
+              firestoreId: clientDocument.id,
+              assignedHelpers:
+                data.assignedHelpers ?? [],
+            };
           }
+        );
 
-          const data = clientDocument.data() as Omit<
-            Client,
-            "firestoreId"
-          >;
-
-          helperClients.push({
-            ...data,
-            firestoreId: clientDocument.id,
-            assignedHelpers: data.assignedHelpers ?? [],
-          });
-        });
-
-        setClients(helperClients);
+        setClients(savedClients);
       } catch (error) {
-        console.error("Failed to load clients:", error);
+        console.error(
+          "Failed to load clients:",
+          error
+        );
         setClients([]);
       } finally {
         setLoadingClients(false);
@@ -181,6 +119,12 @@ export function ClientProvider({
     if (!user) {
       throw new Error(
         "You must be logged in to add a client."
+      );
+    }
+
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can add clients."
       );
     }
 
@@ -202,6 +146,12 @@ export function ClientProvider({
     if (!user) {
       throw new Error(
         "You must be logged in to update a client."
+      );
+    }
+
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can update clients."
       );
     }
 
@@ -239,14 +189,19 @@ export function ClientProvider({
         client.estimatedHours
       ),
       frequency: client.frequency,
-      helperNeeded: Boolean(client.helperNeeded),
+      helperNeeded: Boolean(
+        client.helperNeeded
+      ),
       assignedHelpers:
         client.assignedHelpers ?? [],
       notes: client.notes.trim(),
       active: Boolean(client.active),
     };
 
-    await updateDoc(clientDocument, clientData);
+    await updateDoc(
+      clientDocument,
+      clientData
+    );
 
     setClients((previousClients) =>
       previousClients.map((savedClient) =>
@@ -267,6 +222,12 @@ export function ClientProvider({
     if (!user) {
       throw new Error(
         "You must be logged in to delete a client."
+      );
+    }
+
+    if (role !== "admin") {
+      throw new Error(
+        "Only an admin can delete clients."
       );
     }
 
@@ -301,4 +262,4 @@ export function ClientProvider({
       {children}
     </ClientContext.Provider>
   );
-}
+};

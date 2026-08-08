@@ -100,9 +100,18 @@ function EditCleaning() {
       }
 
       if (name === "clientId") {
+        const selectedClient = clients.find(
+          (client) => client.firestoreId === value
+        );
+
         return {
           ...current,
           clientId: value,
+          clientName: selectedClient?.name ?? "",
+          clientPhone: selectedClient?.phone ?? "",
+          clientAddress: selectedClient?.address ?? "",
+          clientGateCode: selectedClient?.gateCode ?? "",
+          clientNotes: selectedClient?.notes ?? "",
         };
       }
 
@@ -159,7 +168,7 @@ function EditCleaning() {
     event.preventDefault();
     setErrorMessage("");
 
-    const selectedClientExists = clients.some(
+    const selectedClient = clients.find(
       (client) => client.firestoreId === cleaning.clientId
     );
 
@@ -189,7 +198,7 @@ function EditCleaning() {
       return;
     }
 
-    if (!selectedClientExists) {
+    if (!selectedClient) {
       alert("Please select a valid client.");
       return;
     }
@@ -287,6 +296,11 @@ function EditCleaning() {
     try {
       await updateCleaning({
         ...cleaning,
+        clientName: selectedClient.name,
+        clientPhone: selectedClient.phone,
+        clientAddress: selectedClient.address,
+        clientGateCode: selectedClient.gateCode,
+        clientNotes: selectedClient.notes,
         notes: cleaning.notes.trim(),
       });
 
@@ -399,6 +413,7 @@ function EditCleaning() {
           step="0.5"
           value={cleaning.estimatedHours}
           onChange={handleChange}
+          onWheel={(event) => event.currentTarget.blur()}
           required
           className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
         />
