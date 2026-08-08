@@ -236,16 +236,16 @@ function Cleanings() {
 
                       {clientAddress ? (
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                            clientAddress
-                          )}`}
+                          href={`https://maps.apple.com/search?query=${encodeURIComponent(
+                          clientAddress
+                        )}`}
                           target="_blank"
                           rel="noreferrer"
                           className="mt-2 flex items-center gap-2 text-[var(--blue-dark)]"
                         >
                           <MapPin size={16} />
                           <span>{clientAddress}</span>
-                        </a>
+                        </a>  
                       ) : (
                         <p className="mt-2 flex items-center gap-2 text-[var(--muted)]">
                           <MapPin size={16} />
