@@ -8,10 +8,19 @@ export interface Client {
   pricePerCleaning: number;
   startDate: string;
   estimatedHours: number;
-  frequency: "Weekly" | "Twice Weekly" | "Twice Monthly" | "Monthly" | "As Needed";
+  frequency:
+    | "Weekly"
+    | "Twice Weekly"
+    | "Twice Monthly"
+    | "Monthly"
+    | "As Needed";
   helperNeeded: boolean;
   assignedHelpers: string[];
+
   notes: string;
+  pricingNotes: string;
+  cleaningInstructions: string;
+
   active: boolean;
 }
 

@@ -111,7 +111,7 @@ function EditCleaning() {
           clientPhone: selectedClient?.phone ?? "",
           clientAddress: selectedClient?.address ?? "",
           clientGateCode: selectedClient?.gateCode ?? "",
-          clientNotes: selectedClient?.notes ?? "",
+          clientNotes: selectedClient?.cleaningInstructions ?? "",
         };
       }
 
@@ -300,7 +300,7 @@ function EditCleaning() {
         clientPhone: selectedClient.phone,
         clientAddress: selectedClient.address,
         clientGateCode: selectedClient.gateCode,
-        clientNotes: selectedClient.notes,
+        clientNotes: selectedClient.cleaningInstructions,
         notes: cleaning.notes.trim(),
       });
 

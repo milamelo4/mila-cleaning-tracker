@@ -236,7 +236,7 @@ function AddCleaning() {
         clientPhone: selectedClient.phone,
         clientAddress: selectedClient.address,
         clientGateCode: selectedClient.gateCode,
-        clientNotes: selectedClient.notes,
+        clientNotes: selectedClient.cleaningInstructions,
         date: appointmentDate,
         startTime,
         estimatedHours,

@@ -215,7 +215,7 @@ function Cleanings() {
                     : cleaning.clientGateCode;
 
                   const clientNotes = isAdmin
-                    ? client?.notes ||
+                    ? client?.cleaningInstructions ||
                       cleaning.clientNotes
                     : cleaning.clientNotes;
 
@@ -287,7 +287,7 @@ function Cleanings() {
                             {clientNotes && (
                               <p>
                                 <span className="font-medium">
-                                  Client notes:
+                                  Cleaning Instructions:
                                 </span>{" "}
                                 {clientNotes}
                               </p>
