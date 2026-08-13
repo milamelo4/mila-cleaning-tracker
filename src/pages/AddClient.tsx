@@ -248,12 +248,15 @@ function AddClient() {
         className="max-w-2xl rounded-lg border border-[var(--border-soft)] bg-[var(--card)] p-6 shadow"
       >
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="name"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Name
           </label>
 
           <input
             type="text"
+            id="name"
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="name"
             value={client.name}
@@ -266,12 +269,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="phone"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Phone
           </label>
 
           <input
             type="tel"
+            id="phone"
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="phone"
             value={client.phone}
@@ -284,12 +290,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="address"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Address
           </label>
 
           <input
             type="text"
+            id="address"
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="address"
             value={client.address}
@@ -302,12 +311,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="gateCode"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Gate / Garage Code
           </label>
 
           <input
             type="text"
+            id="gateCode"
             name="gateCode"
             value={client.gateCode}
             onChange={handleChange}
@@ -318,12 +330,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="pricePerCleaning"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Price Per Cleaning
           </label>
 
           <input
             type="number"
+            id="pricePerCleaning"
             name="pricePerCleaning"
             value={client.pricePerCleaning}
             onChange={handleChange}
@@ -340,12 +355,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="startDate"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Start Date
           </label>
 
           <input
             type="date"
+            id="startDate"
             name="startDate"
             value={client.startDate}
             onChange={handleChange}
@@ -355,12 +373,15 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="estimatedHours"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Estimated Hours Per Cleaning
           </label>
 
           <input
             type="number"
+            id="estimatedHours"
             name="estimatedHours"
             value={client.estimatedHours}
             onChange={handleChange}
@@ -377,11 +398,14 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="frequency"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Frequency
           </label>
 
           <select
+            id="frequency"
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="frequency"
             value={client.frequency}
@@ -396,7 +420,9 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="notes"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Admin Notes
           </label>
 
@@ -405,6 +431,7 @@ function AddClient() {
           </p>
 
           <textarea
+            id="notes"
             rows={4}
             name="notes"
             value={client.notes}
@@ -416,7 +443,9 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="pricingNotes"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Pricing Notes
           </label>
 
@@ -425,6 +454,7 @@ function AddClient() {
           </p>
 
           <textarea
+            id="pricingNotes"
             rows={3}
             name="pricingNotes"
             value={client.pricingNotes}
@@ -436,7 +466,9 @@ function AddClient() {
         </div>
 
         <div className="mb-6">
-          <label className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label 
+          htmlFor="cleaningInstructions"
+          className="mb-2 block font-medium text-[var(--charcoal)]">
             Cleaning Instructions
           </label>
 
@@ -445,6 +477,7 @@ function AddClient() {
           </p>
 
           <textarea
+            id="cleaningInstructions"
             rows={4}
             name="cleaningInstructions"
             value={
