@@ -10,7 +10,7 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
+  onSnapshot,
   query,
   updateDoc,
   where,
@@ -63,6 +63,33 @@ const getCleaningData = (
   };
 };
 
+const getSavedCleaning = (
+  cleaningDoc: {
+    id: string;
+    data: () => Record<string, unknown>;
+  }
+): Cleaning => {
+  const data = cleaningDoc.data() as Partial<
+    Omit<Cleaning, "firestoreId">
+  >;
+
+  return {
+    clientId: data.clientId ?? "",
+    clientName: data.clientName ?? "",
+    clientPhone: data.clientPhone ?? "",
+    clientAddress: data.clientAddress ?? "",
+    clientGateCode: data.clientGateCode ?? "",
+    clientNotes: data.clientNotes ?? "",
+    date: data.date ?? "",
+    startTime: data.startTime ?? "",
+    estimatedHours: data.estimatedHours ?? 0,
+    assignedHelpers: data.assignedHelpers ?? [],
+    status: data.status ?? "Scheduled",
+    notes: data.notes ?? "",
+    firestoreId: cleaningDoc.id,
+  };
+};
+
 export function CleaningProvider({
   children,
 }: CleaningProviderProps) {
@@ -78,58 +105,47 @@ export function CleaningProvider({
   const { role, loadingRole } = memberContext;
 
   useEffect(() => {
-    const loadCleanings = async () => {
-      if (loadingRole) {
-        return;
-      }
+    if (loadingRole) {
+      return;
+    }
 
-      if (!user || !role) {
+    if (!user || !role) {
+      setCleanings([]);
+      return;
+    }
+
+    const cleaningsQuery =
+      role === "admin"
+        ? cleaningsCollection
+        : query(
+            cleaningsCollection,
+            where(
+              "assignedHelpers",
+              "array-contains",
+              user.uid
+            )
+          );
+
+    const unsubscribe = onSnapshot(
+      cleaningsQuery,
+      (snapshot) => {
+        const savedCleanings = snapshot.docs.map(
+          (cleaningDoc) =>
+            getSavedCleaning(cleaningDoc)
+        );
+
+        setCleanings(savedCleanings);
+      },
+      (error) => {
+        console.error(
+          "Failed to listen for cleaning updates:",
+          error
+        );
         setCleanings([]);
-        return;
       }
+    );
 
-      const cleaningsQuery =
-        role === "admin"
-          ? cleaningsCollection
-          : query(
-              cleaningsCollection,
-              where(
-                "assignedHelpers",
-                "array-contains",
-                user.uid
-              )
-            );
-
-      const snapshot = await getDocs(cleaningsQuery);
-
-      const savedCleanings = snapshot.docs.map(
-        (cleaningDoc) => {
-          const data = cleaningDoc.data() as Partial<
-            Omit<Cleaning, "firestoreId">
-          >;
-
-          return {
-            clientId: data.clientId ?? "",
-            clientName: data.clientName ?? "",
-            clientPhone: data.clientPhone ?? "",
-            clientAddress: data.clientAddress ?? "",
-            clientGateCode: data.clientGateCode ?? "",
-            clientNotes: data.clientNotes ?? "",
-            date: data.date ?? "",
-            startTime: data.startTime ?? "",
-            estimatedHours: data.estimatedHours ?? 0,
-            assignedHelpers: data.assignedHelpers ?? [],
-            status: data.status ?? "Scheduled",
-            notes: data.notes ?? "",
-            firestoreId: cleaningDoc.id,
-          } satisfies Cleaning;
-        }
-      );
-
-      setCleanings(savedCleanings);
-    };
-
-    void loadCleanings();
+    return unsubscribe;
   }, [user, role, loadingRole]);
 
   const addCleanings = async (
@@ -153,29 +169,19 @@ export function CleaningProvider({
 
     const batch = writeBatch(db);
 
-    const savedCleanings = newCleanings.map(
-      (cleaning) => {
-        const cleaningDoc = doc(cleaningsCollection);
-        const cleaningData = getCleaningData(cleaning);
+    newCleanings.forEach((cleaning) => {
+      const cleaningDoc = doc(cleaningsCollection);
+      const cleaningData = getCleaningData(cleaning);
 
-        batch.set(cleaningDoc, cleaningData);
-
-        return {
-          ...cleaning,
-          firestoreId: cleaningDoc.id,
-        };
-      }
-    );
+      batch.set(cleaningDoc, cleaningData);
+    });
 
     await batch.commit();
-
-    setCleanings((previousCleanings) => [
-      ...previousCleanings,
-      ...savedCleanings,
-    ]);
   };
 
-  const addCleaning = async (cleaning: Cleaning) => {
+  const addCleaning = async (
+    cleaning: Cleaning
+  ) => {
     await addCleanings([cleaning]);
   };
 
@@ -211,15 +217,6 @@ export function CleaningProvider({
     const cleaningData = getCleaningData(cleaning);
 
     await updateDoc(cleaningDoc, cleaningData);
-
-    setCleanings((previousCleanings) =>
-      previousCleanings.map((savedCleaning) =>
-        savedCleaning.firestoreId ===
-        cleaning.firestoreId
-          ? cleaning
-          : savedCleaning
-      )
-    );
   };
 
   const deleteCleaning = async (
@@ -246,13 +243,6 @@ export function CleaningProvider({
     );
 
     await deleteDoc(cleaningDoc);
-
-    setCleanings((previousCleanings) =>
-      previousCleanings.filter(
-        (cleaning) =>
-          cleaning.firestoreId !== firestoreId
-      )
-    );
   };
 
   return (

@@ -21,6 +21,8 @@ import { MemberContext } from "../context/MemberContext";
 
 import CleaningCalendar from "../components/CleaningCalendar";
 
+type HelperView = "upcoming" | "history";
+
 function Cleanings() {
   const navigate = useNavigate();
   const cleaningContext = useContext(CleaningContext);
@@ -39,6 +41,9 @@ function Cleanings() {
   const [viewMode, setViewMode] = useState<"calendar" | "list">(
     "calendar"
   );
+
+  const [helperView, setHelperView] =
+    useState<HelperView>("upcoming");
 
   if (!cleaningContext) {
     throw new Error("CleaningContext not found");
@@ -77,31 +82,56 @@ function Cleanings() {
     cleaning.date.startsWith(selectedMonthPrefix)
   );
 
-  const totalEstimatedHours = monthCleanings.reduce(
+  const today = new Date();
+  const todayDate = `${today.getFullYear()}-${String(
+    today.getMonth() + 1
+  ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
+  const helperCleanings = cleanings.filter((cleaning) => {
+    if (helperView === "upcoming") {
+      return (
+        cleaning.status === "Scheduled" &&
+        cleaning.date >= todayDate
+      );
+    }
+
+    return cleaning.status === "Completed";
+  });
+
+  const displayCleanings = isAdmin
+    ? [...monthCleanings].sort((a, b) => {
+        const first = `${a.date}T${a.startTime}`;
+        const second = `${b.date}T${b.startTime}`;
+
+        return first.localeCompare(second);
+      })
+    : [...helperCleanings].sort((a, b) => {
+        const first = `${a.date}T${a.startTime}`;
+        const second = `${b.date}T${b.startTime}`;
+
+        return helperView === "history"
+          ? second.localeCompare(first)
+          : first.localeCompare(second);
+      });
+
+  const summaryCleanings = isAdmin
+    ? monthCleanings.filter(
+        (cleaning) => cleaning.status !== "Cancelled"
+      )
+    : displayCleanings;
+
+  const totalEstimatedHours = summaryCleanings.reduce(
     (total, cleaning) =>
-      cleaning.status === "Cancelled"
-        ? total
-        : total + cleaning.estimatedHours,
+      total + cleaning.estimatedHours,
     0
   );
 
-  const totalAppointments = monthCleanings.filter(
-    (cleaning) => cleaning.status !== "Cancelled"
-  ).length;
+  const totalAppointments = summaryCleanings.length;
 
   const getClientById = (clientId: string) =>
     clients.find(
       (client) => client.firestoreId === clientId
     );
-
-  const sortedCleanings = [...monthCleanings].sort(
-    (a, b) => {
-      const first = `${a.date}T${a.startTime}`;
-      const second = `${b.date}T${b.startTime}`;
-
-      return first.localeCompare(second);
-    }
-  );
 
   const goToPreviousMonth = () => {
     setSelectedMonth((current) => {
@@ -140,8 +170,8 @@ function Cleanings() {
       day: "numeric",
     }).format(new Date(`${date}T00:00:00`));
 
-  const groupedCleanings = sortedCleanings.reduce<
-    Record<string, typeof sortedCleanings>
+  const groupedCleanings = displayCleanings.reduce<
+    Record<string, typeof displayCleanings>
   >((groups, cleaning) => {
     if (!groups[cleaning.date]) {
       groups[cleaning.date] = [];
@@ -166,13 +196,18 @@ function Cleanings() {
         (email): email is string => Boolean(email)
       );
 
+  const emptyMessage = isAdmin
+    ? `No appointments scheduled for ${selectedMonthLabel}.`
+    : helperView === "upcoming"
+      ? "No upcoming cleanings."
+      : "No completed cleanings yet.";
+
   const renderCleaningList = () => {
-    if (sortedCleanings.length === 0) {
+    if (displayCleanings.length === 0) {
       return (
         <div className="rounded-2xl border border-dashed border-[var(--border-soft)] bg-white p-8 text-center">
           <p className="font-semibold text-[var(--charcoal)]">
-            No appointments scheduled for{" "}
-            {selectedMonthLabel}.
+            {emptyMessage}
           </p>
         </div>
       );
@@ -229,23 +264,32 @@ function Cleanings() {
                       key={cleaning.firestoreId}
                       className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
                     >
-                      <p className="text-lg font-semibold text-[var(--charcoal)]">
-                        {clientName ||
-                          "Client unavailable"}
-                      </p>
+                      <div className="flex items-start justify-between gap-3">
+                        <p className="text-lg font-semibold text-[var(--charcoal)]">
+                          {clientName ||
+                            "Client unavailable"}
+                        </p>
+
+                        {!isAdmin &&
+                          helperView === "history" && (
+                            <span className="shrink-0 rounded-full bg-[var(--olive-soft)] px-3 py-1 text-xs font-semibold text-[var(--olive-deep)]">
+                              Completed
+                            </span>
+                          )}
+                      </div>
 
                       {clientAddress ? (
                         <a
                           href={`https://maps.apple.com/search?query=${encodeURIComponent(
-                          clientAddress
-                        )}`}
+                            clientAddress
+                          )}`}
                           target="_blank"
                           rel="noreferrer"
                           className="mt-2 flex items-center gap-2 text-[var(--blue-dark)]"
                         >
                           <MapPin size={16} />
                           <span>{clientAddress}</span>
-                        </a>  
+                        </a>
                       ) : (
                         <p className="mt-2 flex items-center gap-2 text-[var(--muted)]">
                           <MapPin size={16} />
@@ -397,13 +441,19 @@ function Cleanings() {
     );
   };
 
+  const firstSummaryLabel = isAdmin
+    ? "Appointments"
+    : helperView === "upcoming"
+      ? "Upcoming"
+      : "Completed";
+
   return (
     <div className="mx-auto w-full max-w-3xl">
       <div className="mb-4 flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-[var(--charcoal)]">
           {isAdmin
             ? selectedMonthLabel
-            : `My Cleanings — ${selectedMonthLabel}`}
+            : "My Cleanings"}
         </h1>
 
         {isAdmin && (
@@ -416,29 +466,67 @@ function Cleanings() {
         )}
       </div>
 
-      <div className="mb-4 flex items-center justify-between rounded-2xl bg-[var(--cream)] p-3">
-        <button
-          type="button"
-          onClick={goToPreviousMonth}
-          className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
-        >
-          <ChevronLeft size={18} />
-          Previous
-        </button>
+      {isAdmin ? (
+        <div className="mb-4 flex items-center justify-between rounded-2xl bg-[var(--cream)] p-3">
+          <button
+            type="button"
+            onClick={goToPreviousMonth}
+            className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
+          >
+            <ChevronLeft size={18} />
+            Previous
+          </button>
 
-        <span className="font-semibold text-[var(--charcoal)]">
-          {selectedMonthLabel}
-        </span>
+          <span className="font-semibold text-[var(--charcoal)]">
+            {selectedMonthLabel}
+          </span>
 
-        <button
-          type="button"
-          onClick={goToNextMonth}
-          className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
-        >
-          Next
-          <ChevronRight size={18} />
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={goToNextMonth}
+            className="flex items-center gap-1 font-medium text-[var(--blue-dark)]"
+          >
+            Next
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      ) : (
+        <div className="mb-4 flex rounded-xl border border-[var(--border-soft)] bg-white p-1">
+          <button
+            type="button"
+            onClick={() =>
+              setHelperView("upcoming")
+            }
+            aria-pressed={
+              helperView === "upcoming"
+            }
+            className={`w-1/2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              helperView === "upcoming"
+                ? "bg-[var(--blue-dark)] text-white"
+                : "text-[var(--blue-dark)]"
+            }`}
+          >
+            Upcoming
+          </button>
+
+          <button
+            type="button"
+            onClick={() =>
+              setHelperView("history")
+            }
+            aria-pressed={
+              helperView === "history"
+            }
+            className={`w-1/2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              helperView === "history"
+                ? "bg-[var(--blue-dark)] text-white"
+                : "text-[var(--blue-dark)]"
+            }`}
+          >
+            History
+          </button>
+        </div>
+      )}
 
       {isAdmin && (
         <div className="mb-4 flex rounded-xl border border-[var(--border-soft)] bg-white p-1">
@@ -461,8 +549,12 @@ function Cleanings() {
 
           <button
             type="button"
-            onClick={() => setViewMode("list")}
-            aria-pressed={viewMode === "list"}
+            onClick={() =>
+              setViewMode("list")
+            }
+            aria-pressed={
+              viewMode === "list"
+            }
             className={`w-1/2 rounded-lg px-4 py-2 text-sm font-semibold transition ${
               viewMode === "list"
                 ? "bg-[var(--blue-dark)] text-white"
@@ -477,7 +569,7 @@ function Cleanings() {
       <div className="mb-6 grid grid-cols-2 gap-3">
         <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-[var(--blue-dark)]">
-            Appointments
+            {firstSummaryLabel}
           </p>
 
           <p className="mt-1 text-2xl font-bold text-[var(--charcoal)]">
