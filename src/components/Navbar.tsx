@@ -2,6 +2,8 @@ import { useContext } from "react";
 import { NavLink } from "react-router-dom";
 import { MemberContext } from "../context/MemberContext";
 
+import { HomeIcon} from "lucide-react";  
+
 function Navbar() {
   const memberContext = useContext(MemberContext);
 
@@ -26,14 +28,14 @@ function Navbar() {
   }
 
   return (
-    <nav className="flex gap-2 px-4 py-3">
+    <nav className="flex items-center pr-3 pl-2 py-3">
       {role === "admin" ? (
         <>
           <NavLink
             to="/dashboard"
             className={getLinkClass}
           >
-            Dashboard
+            <HomeIcon className=" inline h-4 w-4" />
           </NavLink>
 
           <NavLink
@@ -55,6 +57,13 @@ function Navbar() {
             className={getLinkClass}
           >
             Payments
+          </NavLink>
+
+          <NavLink
+            to="/finances"
+            className={getLinkClass}
+          >
+            Finances
           </NavLink>
         </>
       ) : (

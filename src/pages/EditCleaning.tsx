@@ -68,13 +68,6 @@ function EditCleaning() {
     );
   }
 
-  const now = new Date();
-
-  const today = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, "0"),
-    String(now.getDate()).padStart(2, "0"),
-  ].join("-");
 
   const timeToMinutes = (time: string) => {
     const [hours, minutes] = time.split(":").map(Number);
@@ -205,11 +198,6 @@ function EditCleaning() {
 
     if (!validDate) {
       alert("Please enter a valid date.");
-      return;
-    }
-
-    if (cleaning.date < today) {
-      alert("You cannot schedule a cleaning in the past.");
       return;
     }
 
@@ -374,7 +362,6 @@ function EditCleaning() {
           name="date"
           type="date"
           value={cleaning.date}
-          min={today}
           onChange={handleChange}
           required
           className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"

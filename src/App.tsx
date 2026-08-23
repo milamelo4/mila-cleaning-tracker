@@ -13,7 +13,7 @@ import Cleanings from "./pages/Cleanings";
 import AddCleaning from "./pages/AddCleaning";
 import EditCleaning from "./pages/EditCleaning";
 import Payments from "./pages/Payments";
-
+import Finances from "./pages/Finances";
 function App() {
   return (
     <BrowserRouter>
@@ -115,6 +115,17 @@ function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <MainLayout>
                 <Payments />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/finances"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+                <Finances />
               </MainLayout>
             </ProtectedRoute>
           }
