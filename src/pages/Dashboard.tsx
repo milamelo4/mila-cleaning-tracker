@@ -1,5 +1,7 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { Link } from "react-router-dom";
+import { askAssistant } from "../services/assistantService";
+
 import {
   ArrowRight,
   CalendarDays,
@@ -12,6 +14,8 @@ import {
 import { CleaningContext } from "../context/CleaningContext";
 import { ClientContext } from "../context/ClientContext";
 import { PaymentContext } from "../context/PaymentContext";
+
+
 
 type MetricCardProps = {
   label: string;
@@ -78,52 +82,56 @@ function Dashboard() {
   const clientContext = useContext(ClientContext);
   const paymentContext = useContext(PaymentContext);
 
-  if (!cleaningContext) {
-    throw new Error("CleaningContext not found");
-  }
+  const [assistantQuestion, setAssistantQuestion] = useState("");
+  const [assistantAnswer, setAssistantAnswer] = useState("");
+  const [assistantLoading, setAssistantLoading] = useState(false);
 
-  if (!clientContext) {
-    throw new Error("ClientContext not found");
-  }
+    if (!cleaningContext) {
+      throw new Error("CleaningContext not found");
+    }
 
-  if (!paymentContext) {
-    throw new Error("PaymentContext not found");
-  }
+    if (!clientContext) {
+      throw new Error("ClientContext not found");
+    }
 
-  const { cleanings } = cleaningContext;
-  const { clients } = clientContext;
-  const { payments } = paymentContext;
+    if (!paymentContext) {
+      throw new Error("PaymentContext not found");
+    }
 
-  const now = new Date();
-  const today = getLocalDateKey(now);
+    const { cleanings } = cleaningContext;
+    const { clients } = clientContext;
+    const { payments } = paymentContext;
 
-  const currentYear = String(now.getFullYear());
-  const currentMonth = String(
-    now.getMonth() + 1
-  ).padStart(2, "0");
+    const now = new Date();
+    const today = getLocalDateKey(now);
 
-  const currentMonthPrefix =
-    `${currentYear}-${currentMonth}`;
+    const currentYear = String(now.getFullYear());
+    const currentMonth = String(
+      now.getMonth() + 1
+    ).padStart(2, "0");
 
-  const currentMonthLabel =
-    new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      year: "numeric",
-    }).format(now);
+    const currentMonthPrefix =
+      `${currentYear}-${currentMonth}`;
 
-  const activeClients = clients.filter(
-    (client) => client.active
-  ).length;
+    const currentMonthLabel =
+      new Intl.DateTimeFormat("en-US", {
+        month: "long",
+        year: "numeric",
+      }).format(now);
 
-  const monthCleanings = cleanings.filter(
-    (cleaning) =>
-      cleaning.date.startsWith(currentMonthPrefix) &&
-      cleaning.status !== "Cancelled"
-  );
+    const activeClients = clients.filter(
+      (client) => client.active
+    ).length;
 
-  const completedThisMonth = monthCleanings.filter(
-    (cleaning) => cleaning.status === "Completed"
-  ).length;
+    const monthCleanings = cleanings.filter(
+      (cleaning) =>
+        cleaning.date.startsWith(currentMonthPrefix) &&
+        cleaning.status !== "Cancelled"
+    );
+
+    const completedThisMonth = monthCleanings.filter(
+      (cleaning) => cleaning.status === "Completed"
+    ).length;
 
   const upcomingCleanings = cleanings
     .filter(
@@ -137,10 +145,10 @@ function Dashboard() {
       )
     );
 
-  const nextCleanings = upcomingCleanings.slice(0, 5);
+    const nextCleanings = upcomingCleanings.slice(0, 5);
 
-  const unpaidPayments = payments.filter(
-    (payment) => !payment.paid
+    const unpaidPayments = payments.filter(
+      (payment) => !payment.paid
   );
 
   const unpaidBalance = unpaidPayments.reduce(
@@ -153,6 +161,29 @@ function Dashboard() {
     clients.find(
       (client) => client.firestoreId === clientId
     );
+
+  const handleAskAssistant = async () => {
+    const question = assistantQuestion.trim();
+
+    if (!question) {
+      return;
+    }
+
+    setAssistantLoading(true);
+    setAssistantAnswer("");
+
+    try {
+      const answer = await askAssistant(question);
+      setAssistantAnswer(answer);
+    } catch (error) {
+      console.error(error);
+      setAssistantAnswer(
+        "Something went wrong. Please try again."
+      );
+    } finally {
+      setAssistantLoading(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -180,6 +211,44 @@ function Dashboard() {
           <ArrowRight size={18} />
         </Link>
       </div>
+
+      {/* Mila Assistant */}
+<section className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm">
+  <h2 className="text-xl font-bold text-[var(--charcoal)]">
+    Mila Assistant
+  </h2>
+
+  <p className="mt-1 text-sm text-[var(--muted)]">
+    Ask a question about your cleaning business.
+  </p>
+
+  <div className="mt-4 space-y-3">
+    <textarea
+      value={assistantQuestion}
+      onChange={(event) =>
+        setAssistantQuestion(event.target.value)
+      }
+      placeholder="Ask me something..."
+      rows={3}
+      className="w-full rounded-xl border border-[var(--border-soft)] p-3 outline-none focus:border-[var(--blue)]"
+    />
+
+    <button
+      type="button"
+      onClick={handleAskAssistant}
+      disabled={assistantLoading}
+      className="rounded-xl bg-[var(--blue-dark)] px-4 py-3 font-medium text-white disabled:opacity-50"
+    >
+      {assistantLoading ? "Thinking..." : "Ask Mila"}
+    </button>
+
+    {assistantAnswer && (
+      <div className="rounded-xl bg-[var(--cream)] p-4 text-sm text-[var(--charcoal)]">
+        {assistantAnswer}
+      </div>
+    )}
+  </div>
+</section>
 
       {/* Business Snapshot */}
       <section>

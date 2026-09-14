@@ -1,3 +1,4 @@
+import { getFunctions } from "firebase/functions";
 import {
   initializeAppCheck,
   ReCaptchaEnterpriseProvider,
@@ -25,6 +26,7 @@ initializeAppCheck(app, {
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const functions = getFunctions(app);
 export const googleProvider = new GoogleAuthProvider();
 
 googleProvider.setCustomParameters({
