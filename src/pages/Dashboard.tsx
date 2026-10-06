@@ -1,6 +1,5 @@
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { Link } from "react-router-dom";
-import { askAssistant } from "../services/assistantService";
 
 import {
   ArrowRight,
@@ -82,9 +81,6 @@ function Dashboard() {
   const clientContext = useContext(ClientContext);
   const paymentContext = useContext(PaymentContext);
 
-  const [assistantQuestion, setAssistantQuestion] = useState("");
-  const [assistantAnswer, setAssistantAnswer] = useState("");
-  const [assistantLoading, setAssistantLoading] = useState(false);
 
     if (!cleaningContext) {
       throw new Error("CleaningContext not found");
@@ -162,28 +158,7 @@ function Dashboard() {
       (client) => client.firestoreId === clientId
     );
 
-  const handleAskAssistant = async () => {
-    const question = assistantQuestion.trim();
-
-    if (!question) {
-      return;
-    }
-
-    setAssistantLoading(true);
-    setAssistantAnswer("");
-
-    try {
-      const answer = await askAssistant(question);
-      setAssistantAnswer(answer);
-    } catch (error) {
-      console.error(error);
-      setAssistantAnswer(
-        "Something went wrong. Please try again."
-      );
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
+  
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -211,44 +186,6 @@ function Dashboard() {
           <ArrowRight size={18} />
         </Link>
       </div>
-
-      {/* Mila Assistant */}
-<section className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm">
-  <h2 className="text-xl font-bold text-[var(--charcoal)]">
-    Mila Assistant
-  </h2>
-
-  <p className="mt-1 text-sm text-[var(--muted)]">
-    Ask a question about your cleaning business.
-  </p>
-
-  <div className="mt-4 space-y-3">
-    <textarea
-      value={assistantQuestion}
-      onChange={(event) =>
-        setAssistantQuestion(event.target.value)
-      }
-      placeholder="Ask me something..."
-      rows={3}
-      className="w-full rounded-xl border border-[var(--border-soft)] p-3 outline-none focus:border-[var(--blue)]"
-    />
-
-    <button
-      type="button"
-      onClick={handleAskAssistant}
-      disabled={assistantLoading}
-      className="rounded-xl bg-[var(--blue-dark)] px-4 py-3 font-medium text-white disabled:opacity-50"
-    >
-      {assistantLoading ? "Thinking..." : "Ask Mila"}
-    </button>
-
-    {assistantAnswer && (
-      <div className="rounded-xl bg-[var(--cream)] p-4 text-sm text-[var(--charcoal)]">
-        {assistantAnswer}
-      </div>
-    )}
-  </div>
-</section>
 
       {/* Business Snapshot */}
       <section>

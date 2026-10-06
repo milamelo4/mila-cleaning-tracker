@@ -14,6 +14,7 @@ import AddCleaning from "./pages/AddCleaning";
 import EditCleaning from "./pages/EditCleaning";
 import Payments from "./pages/Payments";
 import Finances from "./pages/Finances";
+import Assistant from "./pages/Assistant";
 function App() {
   return (
     <BrowserRouter>
@@ -130,6 +131,17 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route
+          path="/assistant"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <MainLayout>
+                <Assistant />
+              </MainLayout>
+            </ProtectedRoute>
+          }
+        />  
       </Routes>
     </BrowserRouter>
   );

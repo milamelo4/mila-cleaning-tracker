@@ -1,8 +1,8 @@
 import { useContext } from "react";
 import { NavLink } from "react-router-dom";
-import { MemberContext } from "../context/MemberContext";
+import { HomeIcon, Sparkles } from "lucide-react";
 
-import { HomeIcon} from "lucide-react";  
+import { MemberContext } from "../context/MemberContext";
 
 function Navbar() {
   const memberContext = useContext(MemberContext);
@@ -14,7 +14,7 @@ function Navbar() {
   const { role, loadingRole } = memberContext;
 
   const baseClass =
-    "rounded-md px-3 py-2 text-sm font-medium transition-colors";
+    "rounded-md px-2 py-2 text-sm font-medium transition-colors";
 
   const getLinkClass = ({ isActive }: { isActive: boolean }) =>
     `${baseClass} ${
@@ -28,14 +28,16 @@ function Navbar() {
   }
 
   return (
-    <nav className="flex items-center pr-3 pl-2 py-3">
+    <nav className="flex items-center px-2 py-3">
       {role === "admin" ? (
         <>
           <NavLink
             to="/dashboard"
             className={getLinkClass}
+            aria-label="Dashboard"
+            title="Dashboard"
           >
-            <HomeIcon className=" inline h-4 w-4" />
+            <HomeIcon className="h-4 w-4" />
           </NavLink>
 
           <NavLink
@@ -64,6 +66,21 @@ function Navbar() {
             className={getLinkClass}
           >
             Finances
+          </NavLink>
+
+          <NavLink
+            to="/assistant"
+            className={getLinkClass}
+            aria-label="Mila Assistant"
+            title="Mila Assistant"
+          >
+            <span className="flex items-center gap-1.5">
+              <Sparkles className="h-3 w-3" />
+
+              <span className="hidden sm:inline">
+                Assistant
+              </span>
+            </span>
           </NavLink>
         </>
       ) : (
