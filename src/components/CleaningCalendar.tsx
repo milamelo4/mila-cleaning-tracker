@@ -1,3 +1,5 @@
+import { CheckCircle2 } from "lucide-react";
+
 import type { Cleaning } from "../types/cleaning";
 import type { Client } from "../types/client";
 
@@ -164,17 +166,27 @@ function CleaningCalendar({
 
                     const cancelled =
                       cleaning.status === "Cancelled";
+                    const completed = cleaning.status === "Completed";
 
                     const appointmentContent = (
-                      <>
-                        <span className="block truncate font-semibold">
+                    <>
+                      <span className="flex items-center gap-1 font-semibold">
+                        {completed && (
+                          <CheckCircle2
+                            size={14}
+                            className="shrink-0"
+                          />
+                        )}
+
+                        <span className="truncate">
                           {clientName}
                         </span>
+                      </span>
 
-                        <span className="block truncate opacity-80">
-                          {formatTime(cleaning.startTime)}
-                        </span>
-                      </>
+                      <span className="block truncate opacity-80">
+                        {formatTime(cleaning.startTime)}
+                      </span>
+                    </>
                     );
 
                     if (
@@ -193,10 +205,12 @@ function CleaningCalendar({
                               cleaning.firestoreId as string
                             )
                           }
-                          className={`w-full rounded-md border border-[var(--border-soft)] bg-white px-2 py-1.5 text-left text-xs text-[var(--blue-dark)] shadow-sm transition hover:border-[var(--blue-dark)] ${
+                          className={`w-full rounded-md border px-2 py-1.5 text-left text-xs shadow-sm transition ${
                             cancelled
-                              ? "opacity-50 line-through"
-                              : ""
+                              ? "border-[var(--border-soft)] bg-white text-[var(--blue-dark)] opacity-50 line-through"
+                              : completed
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                                : "border-[var(--border-soft)] bg-white text-[var(--blue-dark)] hover:border-[var(--blue-dark)]"
                           }`}
                         >
                           {appointmentContent}
@@ -213,10 +227,12 @@ function CleaningCalendar({
                         title={`${clientName} at ${formatTime(
                           cleaning.startTime
                         )}`}
-                        className={`rounded-md border border-[var(--border-soft)] bg-white px-2 py-1.5 text-xs text-[var(--blue-dark)] shadow-sm ${
+                        className={`rounded-md border px-2 py-1.5 text-xs shadow-sm ${
                           cancelled
-                            ? "opacity-50 line-through"
-                            : ""
+                            ? "border-[var(--border-soft)] bg-white text-[var(--blue-dark)] opacity-50 line-through"
+                            : completed
+                              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                              : "border-[var(--border-soft)] bg-white text-[var(--blue-dark)]"
                         }`}
                       >
                         {appointmentContent}

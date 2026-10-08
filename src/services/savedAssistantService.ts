@@ -2,6 +2,8 @@ import {
   addDoc,
   collection,
   getDocs,
+  deleteDoc,
+  doc,
   orderBy,
   query,
   serverTimestamp,
@@ -60,4 +62,18 @@ export async function getSavedAssistantAnswers() {
       savedAt: (data.savedAt as Timestamp) ?? null,
     };
   });
+}
+
+export async function deleteSavedAssistantAnswer(
+  answerId: string
+) {
+  await deleteDoc(
+    doc(
+      db,
+      "businesses",
+      "mila-cleaning-tracker",
+      "savedAssistantAnswers",
+      answerId
+    )
+  );
 }

@@ -1,14 +1,25 @@
 import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { askAssistant } from "../services/assistantService";
+
 import {
-  getSavedAssistantAnswers,
-  saveAssistantAnswer,
-  type SavedAssistantAnswer,
+    deleteSavedAssistantAnswer,
+    getSavedAssistantAnswers,
+    saveAssistantAnswer,
+    type SavedAssistantAnswer,
 } from "../services/savedAssistantService";
 
+import {
+    addAssistantChatMessage,
+    createAssistantChat,
+    deleteAssistantChat,
+    getAssistantChatMessages,
+    getAssistantChats,
+    type AssistantChat,
+} from "../services/assistantChatService";
+
 type Message = {
-  id: number;
+  id: string;
   role: "user" | "assistant";
   content: string;
   question?: string;
@@ -19,9 +30,14 @@ function Assistant() {
     const [question, setQuestion] = useState("");
     const [messages, setMessages] = useState<Message[]>([]);
     const [loading, setLoading] = useState(false);
-    const [view, setView] = useState<"chat" | "saved">("chat");
+    const [view, setView] =
+    useState<"chat" | "history" | "saved">("chat");
     const [savedAnswers, setSavedAnswers] = useState<SavedAssistantAnswer[]>([]);
     const [savedLoading, setSavedLoading] = useState(false);
+    const [chats, setChats] = useState<AssistantChat[]>([]);
+    const [activeChatId, setActiveChatId] =
+    useState<string | null>(null);
+    const [chatsLoading, setChatsLoading] = useState(false);
 
     useEffect(() => {
         if (view !== "saved") {
@@ -44,64 +60,120 @@ function Assistant() {
         loadSavedAnswers();
     }, [view]);
 
+    useEffect(() => {
+    const loadChats = async () => {
+        setChatsLoading(true);
+
+        try {
+        const savedChats = await getAssistantChats();
+        setChats(savedChats);
+        } catch (error) {
+        console.error(
+            "Could not load assistant chats:",
+            error
+        );
+        } finally {
+        setChatsLoading(false);
+        }
+    };
+
+    loadChats();
+    }, []);
+
     const handleAsk = async () => {
         const trimmedQuestion = question.trim();
 
         if (!trimmedQuestion || loading) {
-        return;
+            return;
         }
 
         const userMessage: Message = {
-        id: Date.now(),
-        role: "user",
-        content: trimmedQuestion,
+            id: Date.now().toString(),
+            role: "user",
+            content: trimmedQuestion,
         };
 
         setMessages((current) => [
-        ...current,
-        userMessage,
+            ...current,
+            userMessage,
         ]);
 
-        // Clear the box immediately after sending.
         setQuestion("");
         setLoading(true);
 
         try {
-        const answer = await askAssistant(trimmedQuestion);
+            let chatId = activeChatId;
 
-        const assistantMessage: Message = {
-            id: Date.now() + 1,
+            if (!chatId) {
+            chatId = await createAssistantChat(
+                trimmedQuestion
+            );
+
+            setActiveChatId(chatId);
+            }
+
+            await addAssistantChatMessage(
+            chatId,
+            "user",
+            trimmedQuestion
+            );
+
+            const history = messages
+                .slice(-12)
+                .map((message) => ({
+                    role: message.role,
+                    content: message.content,
+                }));
+
+            const answer = await askAssistant(
+            trimmedQuestion,
+            history
+            );
+
+            await addAssistantChatMessage(
+            chatId,
+            "assistant",
+            answer
+            );
+
+            const assistantMessage: Message = {
+            id: `${Date.now()}-assistant`,
             role: "assistant",
             content: answer,
             question: trimmedQuestion,
             saved: false,
             };
 
-        setMessages((current) => [
+            setMessages((current) => [
             ...current,
             assistantMessage,
-        ]);
-        } catch (error) {
-        console.error(error);
+            ]);
 
-        const errorMessage: Message = {
-            id: Date.now() + 1,
+            const updatedChats =
+            await getAssistantChats();
+
+            setChats(updatedChats);
+        } catch (error) {
+            console.error(error);
+
+            const errorMessage: Message = {
+            id: `${Date.now()}-assistant`,
             role: "assistant",
             content:
-            "Something went wrong. Please try again.",
-        };
+                "Something went wrong. Please try again.",
+            };
 
-        setMessages((current) => [
+            setMessages((current) => [
             ...current,
             errorMessage,
-        ]);
+            ]);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     };
 
     const handleSaveAnswer = async (
-        messageId: number,
+        messageId: string,
         question: string,
         answer: string
         ) => {
@@ -119,9 +191,104 @@ function Assistant() {
             console.error("Could not save answer:", error);
         }
     };
+
+    const handleDeleteSavedAnswer = async (
+        answerId: string
+        ) => {
+        const confirmed = window.confirm(
+            "Delete this saved answer?"
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await deleteSavedAssistantAnswer(answerId);
+
+    setSavedAnswers((current) =>
+      current.filter(
+        (answer) => answer.id !== answerId
+      )
+    );
+        } catch (error) {
+            console.error(
+            "Could not delete saved answer:",
+            error
+            );
+        }
+    };
     const handleNewChat = () => {
         setMessages([]);
         setQuestion("");
+        setActiveChatId(null);
+    };
+
+    const handleOpenChat = async (chatId: string) => {
+    setChatsLoading(true);
+
+    try {
+        const storedMessages =
+        await getAssistantChatMessages(chatId);
+
+        const loadedMessages: Message[] =
+        storedMessages.map((message, index) => {
+            const previousMessage =
+            storedMessages[index - 1];
+
+            return {
+            id: message.id,
+            role: message.role,
+            content: message.content,
+            question:
+                message.role === "assistant" &&
+                previousMessage?.role === "user"
+                ? previousMessage.content
+                : undefined,
+            };
+        });
+
+        setMessages(loadedMessages);
+        setActiveChatId(chatId);
+        setView("chat");
+        } catch (error) {
+            console.error(
+            "Could not open assistant chat:",
+            error
+            );
+        } finally {
+            setChatsLoading(false);
+        }
+    };
+
+    const handleDeleteChat = async (
+    chatId: string
+    ) => {
+    const confirmed = window.confirm(
+        "Delete this chat and all of its messages?"
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await deleteAssistantChat(chatId);
+
+        setChats((current) =>
+        current.filter((chat) => chat.id !== chatId)
+        );
+
+        if (activeChatId === chatId) {
+        setActiveChatId(null);
+        setMessages([]);
+        }
+    } catch (error) {
+        console.error(
+        "Could not delete assistant chat:",
+        error
+        );
+    }
     };
 
     return (
@@ -154,7 +321,7 @@ function Assistant() {
             )}
             </div>
 
-            {/* Chat / Saved tabs */}
+            {/* Chat / History / Saved tabs */}
             <div className="mb-4 flex w-fit rounded-xl bg-white p-1 shadow-sm">
             <button
                 type="button"
@@ -166,6 +333,18 @@ function Assistant() {
                 }`}
             >
                 Chat
+            </button>
+
+            <button
+            type="button"
+            onClick={() => setView("history")}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+                view === "history"
+                ? "bg-[var(--blue-dark)] text-white"
+                : "text-[var(--muted-dark)]"
+            }`}
+            >
+            History
             </button>
 
             <button
@@ -245,15 +424,15 @@ function Assistant() {
                                     </button>
                                 </div>
                                 )}
-                        </div>
+                    </div>
                 ) : (
                 <p className="whitespace-pre-wrap">
                     {message.content}
                 </p>
                 )}
+            </div>
         </div>
-    </div>
-))}
+        ))}
 
         {loading && (
         <div className="flex justify-start">
@@ -289,8 +468,64 @@ function Assistant() {
                 </button>
             </div>
             </div>
-        </>
+                  </>
+    ) : view === "history" ? (
+      /* Chat history */
+      <div className="space-y-3">
+        {chatsLoading ? (
+          <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-8 text-center text-sm text-[var(--muted)] shadow-sm">
+            Loading chats...
+          </div>
+        ) : chats.length === 0 ? (
+          <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-8 text-center shadow-sm">
+            <h2 className="font-bold text-[var(--charcoal)]">
+              No chat history yet
+            </h2>
+
+            <p className="mt-2 text-sm text-[var(--muted)]">
+              Your conversations with Mila will appear here.
+            </p>
+          </div>
         ) : (
+          chats.map((chat) => (
+            <div
+              key={chat.id}
+              className="flex items-center justify-between gap-3 rounded-2xl border border-[var(--border-soft)] bg-white p-4 shadow-sm"
+            >
+              <button
+                type="button"
+                onClick={() => handleOpenChat(chat.id)}
+                className="min-w-0 flex-1 text-left"
+              >
+                <p className="truncate font-semibold text-[var(--charcoal)]">
+                  {chat.title}
+                </p>
+
+                {chat.updatedAt && (
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    {chat.updatedAt
+                      .toDate()
+                      .toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })}
+                  </p>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDeleteChat(chat.id)}
+                className="shrink-0 text-xs font-semibold text-red-700 hover:underline"
+              >
+                Delete
+              </button>
+            </div>
+          ))
+        )}
+      </div>
+    ) : (
         /* Saved answers */
         <div className="space-y-4">
             {savedLoading ? (
@@ -314,34 +549,48 @@ function Assistant() {
                 key={savedAnswer.id}
                 className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
                 >
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue-dark)]">
-                    Question
-                </p>
-
-                <h2 className="mt-1 font-bold text-[var(--charcoal)]">
-                    {savedAnswer.question}
-                </h2>
-
-                <div className="mt-4 border-t border-[var(--border-soft)] pt-4">
-                    <div className="space-y-2 text-sm leading-6 text-[var(--charcoal)] [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-bold [&_ul]:ml-5 [&_ul]:list-disc">
-                    <ReactMarkdown>
-                        {savedAnswer.answer}
-                    </ReactMarkdown>
-                    </div>
-                </div>
-
-                {savedAnswer.savedAt && (
-                    <p className="mt-4 text-xs text-[var(--muted)]">
-                    Saved{" "}
-                    {savedAnswer.savedAt
-                        .toDate()
-                        .toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                        })}
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[var(--blue-dark)]">
+                        Question
                     </p>
-                )}
+
+                    <h2 className="mt-1 font-bold text-[var(--charcoal)]">
+                        {savedAnswer.question}
+                    </h2>
+
+                    <div className="mt-4 border-t border-[var(--border-soft)] pt-4">
+                        <div className="space-y-2 text-sm leading-6 text-[var(--charcoal)] [&_ol]:ml-5 [&_ol]:list-decimal [&_p]:mb-2 [&_p:last-child]:mb-0 [&_strong]:font-bold [&_ul]:ml-5 [&_ul]:list-disc">
+                        <ReactMarkdown>
+                            {savedAnswer.answer}
+                        </ReactMarkdown>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                        {savedAnswer.savedAt ? (
+                            <p className="text-xs text-[var(--muted)]">
+                            Saved{" "}
+                            {savedAnswer.savedAt
+                                .toDate()
+                                .toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                                })}
+                            </p>
+                        ) : (
+                            <span />
+                        )}
+
+                        <button
+                            type="button"
+                            onClick={() =>
+                            handleDeleteSavedAnswer(savedAnswer.id)
+                            }
+                            className="text-xs font-semibold text-red-700 hover:underline"
+                        >
+                            Delete
+                        </button>
+                    </div>
                 </article>
             ))
             )}
