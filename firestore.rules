@@ -1,0 +1,384 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /businesses/{businessId} {
+
+      function isMember() {
+        return request.auth != null
+          && exists(
+            /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)
+          );
+      }
+
+      function isAdmin() {
+        return isMember()
+          && get(
+            /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)
+          ).data.role == "admin";
+      }
+
+      function isHelper() {
+        return isMember()
+          && get(
+            /databases/$(database)/documents/businesses/$(businessId)/members/$(request.auth.uid)
+          ).data.role == "helper";
+      }
+
+      match /members/{memberId} {
+        allow get: if isAdmin()
+          || (
+            request.auth != null
+            && request.auth.uid == memberId
+          );
+
+        allow list: if isAdmin();
+
+        allow create, update, delete: if isAdmin();
+      }
+
+      match /clients/{clientId} {
+
+        function validClient(data) {
+          return data.keys().hasAll([
+              "id",
+              "name",
+              "phone",
+              "address",
+              "gateCode",
+              "pricePerCleaning",
+              "startDate",
+              "estimatedHours",
+              "frequency",
+              "helperNeeded",
+              "assignedHelpers",
+              "notes",
+              "pricingNotes",
+              "cleaningInstructions",
+              "active"
+            ])
+            && data.keys().hasOnly([
+              "id",
+              "name",
+              "phone",
+              "address",
+              "gateCode",
+              "pricePerCleaning",
+              "startDate",
+              "estimatedHours",
+              "frequency",
+              "helperNeeded",
+              "assignedHelpers",
+              "notes",
+              "pricingNotes",
+              "cleaningInstructions",
+              "active"
+            ])
+
+            && data.id is number
+
+            && data.name is string
+
+            && data.phone is string
+
+            && data.address is string
+
+            && data.gateCode is string
+
+            && data.pricePerCleaning is number
+
+            && data.startDate is string
+
+            && data.estimatedHours is number
+
+            && data.frequency is string
+
+            && data.helperNeeded is bool
+
+            && data.assignedHelpers is list
+
+            // Private admin notes.
+            && data.notes is string
+            && data.notes.size() <= 1000
+
+            // Private pricing / raise history.
+            && data.pricingNotes is string
+            && data.pricingNotes.size() <= 1000
+
+            // Helper-safe cleaning instructions.
+            && data.cleaningInstructions is string
+            && data.cleaningInstructions.size() <= 1000
+
+            && data.active is bool;
+        }
+
+        // Full client documents contain financial/admin-only information.
+        allow read: if isAdmin();
+
+        allow create, update: if isAdmin()
+          && validClient(request.resource.data);
+
+        allow delete: if isAdmin();
+      }
+
+      match /cleanings/{cleaningId} {
+
+        function validCleaning(data) {
+          return data.keys().hasAll([
+              "clientId",
+              "clientName",
+              "clientPhone",
+              "clientAddress",
+              "clientGateCode",
+              "clientNotes",
+              "date",
+              "startTime",
+              "estimatedHours",
+              "assignedHelpers",
+              "status",
+              "notes"
+            ])
+            && data.keys().hasOnly([
+              "clientId",
+              "clientName",
+              "clientPhone",
+              "clientAddress",
+              "clientGateCode",
+              "clientNotes",
+              "date",
+              "startTime",
+              "estimatedHours",
+              "assignedHelpers",
+              "status",
+              "notes"
+            ])
+
+            && data.clientId is string
+            && data.clientId.size() > 0
+            && exists(
+              /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
+            )
+
+            && data.clientName is string
+            && data.clientName.size() > 0
+            && data.clientName.size() <= 100
+
+            && data.clientPhone is string
+            && data.clientPhone.size() <= 50
+
+            && data.clientAddress is string
+            && data.clientAddress.size() <= 300
+
+            && data.clientGateCode is string
+            && data.clientGateCode.size() <= 100
+
+            // This is the helper-safe copy of client.cleaningInstructions.
+            && data.clientNotes is string
+            && data.clientNotes.size() <= 1000
+
+            && data.date is string
+            && data.date.matches(
+              "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            )
+
+            && data.startTime is string
+            && data.startTime.matches(
+              "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+            )
+
+            && data.estimatedHours is number
+            && data.estimatedHours >= 0.5
+            && data.estimatedHours <= 24
+
+            && data.assignedHelpers is list
+            && data.assignedHelpers.size() <= 20
+
+            && data.status is string
+            && data.status in [
+              "Scheduled",
+              "Completed",
+              "Cancelled"
+            ]
+
+            && data.notes is string
+            && data.notes.size() <= 1000;
+        }
+
+        allow read: if isAdmin()
+          || (
+            isHelper()
+            && request.auth.uid
+              in resource.data.assignedHelpers
+          );
+
+        allow create, update: if isAdmin()
+          && validCleaning(request.resource.data);
+
+        allow delete: if isAdmin();
+      }
+
+      match /payments/{paymentId} {
+
+        function validPaymentFields(data) {
+          return data.keys().hasAll([
+              "cleaningId",
+              "clientId",
+              "clientName",
+              "cleaningDate",
+              "amountCharged",
+              "actualHours",
+              "helperPayout",
+              "paid",
+              "paidDate",
+              "notes"
+            ])
+            && data.keys().hasOnly([
+              "cleaningId",
+              "clientId",
+              "clientName",
+              "cleaningDate",
+              "amountCharged",
+              "actualHours",
+              "helperPayout",
+              "paid",
+              "paidDate",
+              "notes"
+            ])
+
+            && data.cleaningId is string
+            && data.cleaningId.size() > 0
+
+            && data.clientId is string
+            && data.clientId.size() > 0
+
+            && data.clientName is string
+            && data.clientName.size() >= 1
+            && data.clientName.size() <= 100
+
+            && data.cleaningDate is string
+            && data.cleaningDate.matches(
+              "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            )
+
+            && data.amountCharged is number
+            && data.amountCharged >= 0.01
+            && data.amountCharged <= 10000
+
+            && data.actualHours is number
+            && data.actualHours >= 0.25
+            && data.actualHours <= 24
+
+            && data.helperPayout is number
+            && data.helperPayout >= 0
+            && data.helperPayout <= data.amountCharged
+
+            && data.paid is bool
+
+            && data.paidDate is string
+            && (
+              (
+                data.paid == false
+                && data.paidDate == ""
+              )
+              ||
+              (
+                data.paid == true
+                && data.paidDate.matches(
+                  "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                )
+              )
+            )
+
+            && data.notes is string
+            && data.notes.size() <= 1000;
+        }
+
+        function validPaymentLinks(data) {
+          return exists(
+              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
+            )
+            && exists(
+              /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
+            )
+
+            && get(
+              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
+            ).data.clientId == data.clientId
+
+            && get(
+              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
+            ).data.date == data.cleaningDate
+
+            && get(
+              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
+            ).data.status == "Completed"
+
+            && get(
+              /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
+            ).data.name == data.clientName;
+        }
+
+        allow read: if isAdmin();
+
+        allow create: if isAdmin()
+          && validPaymentFields(request.resource.data)
+          && validPaymentLinks(request.resource.data);
+
+        allow update: if isAdmin()
+          && validPaymentFields(request.resource.data)
+
+          && request.resource.data.cleaningId
+            == resource.data.cleaningId
+
+          && request.resource.data.clientId
+            == resource.data.clientId
+
+          && request.resource.data.clientName
+            == resource.data.clientName
+
+          && request.resource.data.cleaningDate
+            == resource.data.cleaningDate;
+
+        allow delete: if isAdmin();
+      }
+
+      match /savedAssistantAnswers/{answerId} {
+
+        function validSavedAnswer(data) {
+          return data.keys().hasAll([
+              "question",
+              "answer",
+              "savedBy",
+              "savedAt"
+            ])
+            && data.keys().hasOnly([
+              "question",
+              "answer",
+              "savedBy",
+              "savedAt"
+            ])
+
+            && data.question is string
+            && data.question.size() > 0
+            && data.question.size() <= 2000
+
+            && data.answer is string
+            && data.answer.size() > 0
+            && data.answer.size() <= 20000
+
+            && data.savedBy is string
+            && data.savedBy == request.auth.uid
+
+            && data.savedAt is timestamp;
+        }
+
+        allow read: if isAdmin();
+
+        allow create: if isAdmin()
+          && validSavedAnswer(request.resource.data);
+
+        allow delete: if isAdmin();
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+# Dependencies
+node_modules/
+
+# TypeScript build output
+lib/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+firebase-debug.log*
+firebase-debug.*.log*
+
+# Environment and local secret files
+.env
+.env.*
+!.env.example
+*.local
+.secret.local
+.runtimeconfig.json
+
+# Private keys and certificates
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Cloud/service account credentials
+serviceAccount*.json
+service-account*.json
+*firebase-adminsdk*.json
+credentials*.json
+
+# Test and coverage output
+coverage/
+.nyc_output/
+
+# Caches
+.npm/
+.eslintcache
+
+# Operating system files
+.DS_Store
+Thumbs.db
