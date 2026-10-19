@@ -1,5 +1,4 @@
 import {
-  createContext,
   useContext,
   useEffect,
   useState,
@@ -18,23 +17,19 @@ import {
 } from "firebase/firestore";
 
 import { useAuthState } from "react-firebase-hooks/auth";
+
 import { auth, db } from "../firebase";
-import { MemberContext } from "./MemberContext";
 import type { Cleaning } from "../types/cleaning";
-
-type CleaningContextType = {
-  cleanings: Cleaning[];
-  addCleaning: (cleaning: Cleaning) => Promise<void>;
-  addCleanings: (cleanings: Cleaning[]) => Promise<void>;
-  updateCleaning: (cleaning: Cleaning) => Promise<void>;
-  deleteCleaning: (firestoreId: string) => Promise<void>;
-};
-
-export const CleaningContext =
-  createContext<CleaningContextType | null>(null);
+import { CleaningContext } from "./CleaningContext";
+import { MemberContext } from "./MemberContext";
 
 type CleaningProviderProps = {
   children: ReactNode;
+};
+
+type CleaningSnapshotState = {
+  scopeKey: string | null;
+  cleanings: Cleaning[];
 };
 
 const cleaningsCollection = collection(
@@ -93,9 +88,13 @@ const getSavedCleaning = (
 export function CleaningProvider({
   children,
 }: CleaningProviderProps) {
-  const [cleanings, setCleanings] = useState<Cleaning[]>([]);
-  const [user] = useAuthState(auth);
+  const [cleaningSnapshot, setCleaningSnapshot] =
+    useState<CleaningSnapshotState>({
+      scopeKey: null,
+      cleanings: [],
+    });
 
+  const [user] = useAuthState(auth);
   const memberContext = useContext(MemberContext);
 
   if (!memberContext) {
@@ -103,14 +102,15 @@ export function CleaningProvider({
   }
 
   const { role, loadingRole } = memberContext;
+  const userId = user?.uid ?? null;
+
+  const activeScopeKey =
+    !loadingRole && userId && role
+      ? `${userId}:${role}`
+      : null;
 
   useEffect(() => {
-    if (loadingRole) {
-      return;
-    }
-
-    if (!user || !role) {
-      setCleanings([]);
+    if (!activeScopeKey || !userId || !role) {
       return;
     }
 
@@ -122,7 +122,7 @@ export function CleaningProvider({
             where(
               "assignedHelpers",
               "array-contains",
-              user.uid
+              userId
             )
           );
 
@@ -134,19 +134,31 @@ export function CleaningProvider({
             getSavedCleaning(cleaningDoc)
         );
 
-        setCleanings(savedCleanings);
+        setCleaningSnapshot({
+          scopeKey: activeScopeKey,
+          cleanings: savedCleanings,
+        });
       },
       (error) => {
         console.error(
           "Failed to listen for cleaning updates:",
           error
         );
-        setCleanings([]);
+
+        setCleaningSnapshot({
+          scopeKey: activeScopeKey,
+          cleanings: [],
+        });
       }
     );
 
     return unsubscribe;
-  }, [user, role, loadingRole]);
+  }, [activeScopeKey, role, userId]);
+
+  const cleanings =
+    cleaningSnapshot.scopeKey === activeScopeKey
+      ? cleaningSnapshot.cleanings
+      : [];
 
   const addCleanings = async (
     newCleanings: Cleaning[]

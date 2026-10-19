@@ -1,14 +1,17 @@
 import {
   useContext,
-  useEffect,
   useState,
+  type ChangeEvent,
+  type FormEvent,
 } from "react";
 import {
   useNavigate,
   useParams,
 } from "react-router-dom";
 
-import { ClientContext } from "../context/ClientContext";
+import {
+  ClientContext,
+} from "../context/ClientContext";
 import type { Client } from "../types/client";
 
 const normalizeClient = (
@@ -16,77 +19,55 @@ const normalizeClient = (
 ): Client => ({
   ...client,
   notes: client.notes ?? "",
-  pricingNotes: client.pricingNotes ?? "",
+  pricingNotes:
+    client.pricingNotes ?? "",
   cleaningInstructions:
     client.cleaningInstructions ?? "",
 });
 
-function EditClient() {
+const validFrequencies: Client["frequency"][] = [
+  "Weekly",
+  "Twice Weekly",
+  "Twice Monthly",
+  "Monthly",
+  "As Needed",
+];
+
+type EditClientFormProps = {
+  initialClient: Client;
+  updateClient: (
+    client: Client
+  ) => Promise<void>;
+};
+
+function EditClientForm({
+  initialClient,
+  updateClient,
+}: EditClientFormProps) {
   const navigate = useNavigate();
-  const { clientId } = useParams();
-  const clientContext =
-    useContext(ClientContext);
-
-  if (!clientContext) {
-    throw new Error(
-      "ClientContext not found"
-    );
-  }
-
-  const {
-    clients,
-    loadingClients,
-    updateClient,
-  } = clientContext;
-
-  const selectedClient = clients.find(
-    (savedClient) =>
-      savedClient.firestoreId === clientId
-  );
 
   const [client, setClient] =
-    useState<Client | undefined>(
-      selectedClient
-        ? normalizeClient(selectedClient)
-        : undefined
+    useState<Client>(() =>
+      normalizeClient(initialClient)
     );
 
-  useEffect(() => {
-    if (selectedClient) {
-      setClient(
-        normalizeClient(selectedClient)
-      );
-    }
-  }, [selectedClient]);
+  const [saving, setSaving] =
+    useState(false);
 
-  if (loadingClients) {
-    return (
-      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
-        <p className="text-[var(--muted)]">
-          Loading client...
-        </p>
-      </div>
-    );
-  }
-
-  if (!client) {
-    return (
-      <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--card)] p-6">
-        <p className="text-[var(--muted-dark)]">
-          Client not found.
-        </p>
-      </div>
-    );
-  }
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   const handleChange = (
-    e: React.ChangeEvent<
+    event: ChangeEvent<
       | HTMLInputElement
       | HTMLTextAreaElement
       | HTMLSelectElement
     >
   ) => {
-    const { name, value } = e.target;
+    const { name, value } =
+      event.target;
 
     let formattedValue:
       | string
@@ -99,19 +80,23 @@ function EditClient() {
 
       if (numbers.length <= 3) {
         formattedValue = numbers;
-      } else if (numbers.length <= 6) {
-        formattedValue = `(${numbers.slice(
-          0,
-          3
-        )}) ${numbers.slice(3)}`;
+      } else if (
+        numbers.length <= 6
+      ) {
+        formattedValue =
+          `(${numbers.slice(
+            0,
+            3
+          )}) ${numbers.slice(3)}`;
       } else {
-        formattedValue = `(${numbers.slice(
-          0,
-          3
-        )}) ${numbers.slice(
-          3,
-          6
-        )}-${numbers.slice(6)}`;
+        formattedValue =
+          `(${numbers.slice(
+            0,
+            3
+          )}) ${numbers.slice(
+            3,
+            6
+          )}-${numbers.slice(6)}`;
       }
     }
 
@@ -122,46 +107,43 @@ function EditClient() {
       formattedValue = Number(value);
     }
 
-    setClient((previousClient) => {
-      if (!previousClient) {
-        return previousClient;
-      }
-
-      return {
+    setClient(
+      (previousClient) => ({
         ...previousClient,
         [name]: formattedValue,
-      };
-    });
+      })
+    );
   };
 
   const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) => {
-    e.preventDefault();
+    event.preventDefault();
+    setErrorMessage("");
 
-    const name = client.name.trim();
+    const name =
+      client.name.trim();
+
     const address =
       client.address.trim();
+
     const gateCode =
       client.gateCode.trim();
 
     const notes =
       client.notes.trim();
+
     const pricingNotes =
       client.pricingNotes.trim();
+
     const cleaningInstructions =
       client.cleaningInstructions.trim();
 
     const phoneDigits =
-      client.phone.replace(/\D/g, "");
-
-    const validFrequencies = [
-      "Weekly",
-      "Twice Weekly",
-      "Twice Monthly",
-      "Monthly",
-      "As Needed",
-    ];
+      client.phone.replace(
+        /\D/g,
+        ""
+      );
 
     if (
       name.length < 2 ||
@@ -173,7 +155,9 @@ function EditClient() {
       return;
     }
 
-    if (phoneDigits.length !== 10) {
+    if (
+      phoneDigits.length !== 10
+    ) {
       alert(
         "Please enter a valid 10-digit phone number."
       );
@@ -201,8 +185,10 @@ function EditClient() {
       !Number.isFinite(
         client.pricePerCleaning
       ) ||
-      client.pricePerCleaning < 0.01 ||
-      client.pricePerCleaning > 10000
+      client.pricePerCleaning <
+        0.01 ||
+      client.pricePerCleaning >
+        10000
     ) {
       alert(
         "Price must be between $0.01 and $10,000."
@@ -271,19 +257,34 @@ function EditClient() {
       return;
     }
 
-    await updateClient({
-      ...client,
-      name,
-      address,
-      gateCode,
-      notes,
-      pricingNotes,
-      cleaningInstructions,
-    });
+    setSaving(true);
 
-    navigate(
-      `/clients/${client.firestoreId}`
-    );
+    try {
+      await updateClient({
+        ...client,
+        name,
+        address,
+        gateCode,
+        notes,
+        pricingNotes,
+        cleaningInstructions,
+      });
+
+      navigate(
+        `/clients/${client.firestoreId}`
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update client:",
+        error
+      );
+
+      setErrorMessage(
+        "The client could not be updated. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -294,7 +295,8 @@ function EditClient() {
         </h1>
 
         <p className="mt-1 text-[var(--blue-dark)]">
-          Update this client's information.
+          Update this client's
+          information.
         </p>
       </div>
 
@@ -408,7 +410,8 @@ function EditClient() {
 
         <div className="mb-4">
           <label className="mb-2 block font-medium text-[var(--charcoal)]">
-            Estimated Hours Per Cleaning
+            Estimated Hours Per
+            Cleaning
           </label>
 
           <input
@@ -440,13 +443,21 @@ function EditClient() {
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
           >
-            <option>Weekly</option>
-            <option>Twice Weekly</option>
+            <option>
+              Weekly
+            </option>
+            <option>
+              Twice Weekly
+            </option>
             <option>
               Twice Monthly
             </option>
-            <option>Monthly</option>
-            <option>As Needed</option>
+            <option>
+              Monthly
+            </option>
+            <option>
+              As Needed
+            </option>
           </select>
         </div>
 
@@ -456,7 +467,8 @@ function EditClient() {
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Private. Helpers will not see these notes.
+            Private. Helpers will not
+            see these notes.
           </p>
 
           <textarea
@@ -476,7 +488,8 @@ function EditClient() {
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Private. Use this for raises and pricing history.
+            Private. Use this for raises
+            and pricing history.
           </p>
 
           <textarea
@@ -498,7 +511,9 @@ function EditClient() {
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Helpers assigned to a cleaning can see this information.
+            Helpers assigned to a
+            cleaning can see this
+            information.
           </p>
 
           <textarea
@@ -514,6 +529,12 @@ function EditClient() {
           />
         </div>
 
+        {errorMessage && (
+          <p className="mb-4 text-sm font-medium text-red-700">
+            {errorMessage}
+          </p>
+        )}
+
         <div className="flex gap-3">
           <button
             type="button"
@@ -522,20 +543,92 @@ function EditClient() {
                 `/clients/${client.firestoreId}`
               )
             }
-            className="w-full rounded-md border border-[var(--border-soft)] px-4 py-3 font-medium text-[var(--charcoal)]"
+            disabled={saving}
+            className="w-full rounded-md border border-[var(--border-soft)] px-4 py-3 font-medium text-[var(--charcoal)] disabled:cursor-not-allowed disabled:opacity-60"
           >
             Cancel
           </button>
 
           <button
             type="submit"
-            className="w-full rounded-md bg-[var(--blue-dark)] px-4 py-3 font-medium text-white transition hover:bg-[var(--blue)]"
+            disabled={saving}
+            className="w-full rounded-md bg-[var(--blue-dark)] px-4 py-3 font-medium text-white transition hover:bg-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Save Changes
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+function EditClient() {
+  const navigate = useNavigate();
+  const { clientId } =
+    useParams();
+
+  const clientContext =
+    useContext(ClientContext);
+
+  if (!clientContext) {
+    throw new Error(
+      "ClientContext not found"
+    );
+  }
+
+  const {
+    clients,
+    loadingClients,
+    updateClient,
+  } = clientContext;
+
+  if (loadingClients) {
+    return (
+      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
+        <p className="text-[var(--muted)]">
+          Loading client...
+        </p>
+      </div>
+    );
+  }
+
+  const selectedClient =
+    clients.find(
+      (savedClient) =>
+        savedClient.firestoreId ===
+        clientId
+    );
+
+  if (!selectedClient) {
+    return (
+      <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--card)] p-6">
+        <p className="text-[var(--muted-dark)]">
+          Client not found.
+        </p>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate("/clients")
+          }
+          className="mt-4 font-semibold text-[var(--blue-dark)] hover:underline"
+        >
+          Back to Clients
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <EditClientForm
+      key={clientId}
+      initialClient={
+        selectedClient
+      }
+      updateClient={updateClient}
+    />
   );
 }
 

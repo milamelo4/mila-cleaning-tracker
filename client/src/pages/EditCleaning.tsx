@@ -1,110 +1,119 @@
-import { useContext, useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import {
+  useContext,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
+import {
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 
-import { CleaningContext } from "../context/CleaningContext";
-import { ClientContext } from "../context/ClientContext";
-import { MemberContext } from "../context/MemberContext";
+import {
+  CleaningContext,
+} from "../context/CleaningContext";
+import {
+  ClientContext,
+} from "../context/ClientContext";
+import {
+  MemberContext,
+  type Member,
+} from "../context/MemberContext";
 import type { Cleaning } from "../types/cleaning";
+import type { Client } from "../types/client";
 
-function EditCleaning() {
+type EditCleaningFormProps = {
+  initialCleaning: Cleaning;
+  cleanings: Cleaning[];
+  clients: Client[];
+  helpers: Member[];
+  updateCleaning: (
+    cleaning: Cleaning
+  ) => Promise<void>;
+};
+
+const validStatuses: Cleaning["status"][] = [
+  "Scheduled",
+  "Completed",
+  "Cancelled",
+];
+
+const timeToMinutes = (
+  time: string
+) => {
+  const [hours, minutes] =
+    time.split(":").map(Number);
+
+  return hours * 60 + minutes;
+};
+
+function EditCleaningForm({
+  initialCleaning,
+  cleanings,
+  clients,
+  helpers,
+  updateCleaning,
+}: EditCleaningFormProps) {
   const navigate = useNavigate();
-  const { cleaningId } = useParams();
 
-  const cleaningContext = useContext(CleaningContext);
-  const clientContext = useContext(ClientContext);
-  const memberContext = useContext(MemberContext);
+  const [cleaning, setCleaning] =
+    useState<Cleaning>(() => ({
+      ...initialCleaning,
+      assignedHelpers: [
+        ...initialCleaning.assignedHelpers,
+      ],
+    }));
 
-  const [cleaning, setCleaning] = useState<Cleaning | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [saving, setSaving] =
+    useState(false);
 
-  const selectedCleaning = cleaningContext?.cleanings.find(
-    (savedCleaning) => savedCleaning.firestoreId === cleaningId
-  );
-
-  useEffect(() => {
-    if (selectedCleaning) {
-      setCleaning({ ...selectedCleaning });
-    }
-  }, [selectedCleaning]);
-
-  if (!cleaningContext) {
-    throw new Error("CleaningContext not found");
-  }
-
-  if (!clientContext) {
-    throw new Error("ClientContext not found");
-  }
-
-  if (!memberContext) {
-    throw new Error("MemberContext not found");
-  }
-
-  const { cleanings, updateCleaning } = cleaningContext;
-  const { clients } = clientContext;
-  const { helpers } = memberContext;
-
-  if (!selectedCleaning) {
-    return (
-      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
-        <p className="text-[var(--muted)]">Cleaning not found.</p>
-
-        <button
-          type="button"
-          onClick={() => navigate("/cleanings")}
-          className="mt-4 font-semibold text-[var(--blue-dark)] hover:underline"
-        >
-          Back to Cleanings
-        </button>
-      </div>
-    );
-  }
-
-  if (!cleaning) {
-    return (
-      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
-        <p className="text-[var(--muted)]">Loading cleaning...</p>
-      </div>
-    );
-  }
-
-
-  const timeToMinutes = (time: string) => {
-    const [hours, minutes] = time.split(":").map(Number);
-
-    return hours * 60 + minutes;
-  };
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    event: ChangeEvent<
+      | HTMLInputElement
+      | HTMLTextAreaElement
+      | HTMLSelectElement
     >
   ) => {
-    const { name, value } = event.target;
+    const { name, value } =
+      event.target;
 
     setCleaning((current) => {
-      if (!current) return current;
-
       if (name === "estimatedHours") {
         return {
           ...current,
-          estimatedHours: Number(value),
+          estimatedHours:
+            Number(value),
         };
       }
 
       if (name === "clientId") {
-        const selectedClient = clients.find(
-          (client) => client.firestoreId === value
-        );
+        const selectedClient =
+          clients.find(
+            (client) =>
+              client.firestoreId ===
+              value
+          );
 
         return {
           ...current,
           clientId: value,
-          clientName: selectedClient?.name ?? "",
-          clientPhone: selectedClient?.phone ?? "",
-          clientAddress: selectedClient?.address ?? "",
-          clientGateCode: selectedClient?.gateCode ?? "",
-          clientNotes: selectedClient?.cleaningInstructions ?? "",
+          clientName:
+            selectedClient?.name ?? "",
+          clientPhone:
+            selectedClient?.phone ?? "",
+          clientAddress:
+            selectedClient?.address ?? "",
+          clientGateCode:
+            selectedClient?.gateCode ?? "",
+          clientNotes:
+            selectedClient
+              ?.cleaningInstructions ??
+            "",
         };
       }
 
@@ -125,7 +134,8 @@ function EditCleaning() {
       if (name === "status") {
         return {
           ...current,
-          status: value as Cleaning["status"],
+          status:
+            value as Cleaning["status"],
         };
       }
 
@@ -140,100 +150,144 @@ function EditCleaning() {
     });
   };
 
-  const toggleHelper = (helperId: string, checked: boolean) => {
+  const toggleHelper = (
+    helperId: string,
+    checked: boolean
+  ) => {
     setCleaning((current) => {
-      if (!current) return current;
-
       return {
         ...current,
         assignedHelpers: checked
-          ? [...current.assignedHelpers, helperId]
+          ? [
+              ...current.assignedHelpers,
+              helperId,
+            ]
           : current.assignedHelpers.filter(
-              (savedHelperId) => savedHelperId !== helperId
+              (savedHelperId) =>
+                savedHelperId !== helperId
             ),
       };
     });
   };
 
   const handleSubmit = async (
-    event: React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
     setErrorMessage("");
 
-    const selectedClient = clients.find(
-      (client) => client.firestoreId === cleaning.clientId
-    );
+    const selectedClient =
+      clients.find(
+        (client) =>
+          client.firestoreId ===
+          cleaning.clientId
+      );
 
-    const validDate = /^\d{4}-\d{2}-\d{2}$/.test(cleaning.date);
+    const validDate =
+      /^\d{4}-\d{2}-\d{2}$/.test(
+        cleaning.date
+      );
 
     const validStartTime =
-      /^([01]\d|2[0-3]):[0-5]\d$/.test(cleaning.startTime);
+      /^([01]\d|2[0-3]):[0-5]\d$/.test(
+        cleaning.startTime
+      );
 
     const validHours =
-      Number.isFinite(cleaning.estimatedHours) &&
+      Number.isFinite(
+        cleaning.estimatedHours
+      ) &&
       cleaning.estimatedHours >= 0.5 &&
       cleaning.estimatedHours <= 24;
 
-    const validHelperIds = cleaning.assignedHelpers.every(
-      (helperId) =>
-        helpers.some((helper) => helper.uid === helperId)
-    );
-
-    const validStatuses: Cleaning["status"][] = [
-      "Scheduled",
-      "Completed",
-      "Cancelled",
-    ];
+    const validHelperIds =
+      cleaning.assignedHelpers.every(
+        (helperId) =>
+          helpers.some(
+            (helper) =>
+              helper.uid === helperId
+          )
+      );
 
     if (!cleaning.firestoreId) {
-      alert("Cleaning Firestore ID is missing.");
+      alert(
+        "Cleaning Firestore ID is missing."
+      );
       return;
     }
 
     if (!selectedClient) {
-      alert("Please select a valid client.");
+      alert(
+        "Please select a valid client."
+      );
       return;
     }
 
     if (!validDate) {
-      alert("Please enter a valid date.");
+      alert(
+        "Please enter a valid date."
+      );
       return;
     }
 
     if (!validStartTime) {
-      alert("Please enter a valid start time.");
+      alert(
+        "Please enter a valid start time."
+      );
       return;
     }
 
     if (!validHours) {
-      alert("Estimated hours must be between 0.5 and 24.");
+      alert(
+        "Estimated hours must be between 0.5 and 24."
+      );
       return;
     }
 
     if (!validHelperIds) {
-      alert("One or more selected helpers are invalid.");
-      return;
-    }
-
-    if (!validStatuses.includes(cleaning.status)) {
-      alert("Please select a valid cleaning status.");
-      return;
-    }
-
-    if (cleaning.notes.trim().length > 1000) {
-      alert("Notes must be 1,000 characters or fewer.");
-      return;
-    }
-
-    if (cleaning.status !== "Cancelled") {
-      const sameClientSameDay = cleanings.some(
-        (savedCleaning) =>
-          savedCleaning.firestoreId !== cleaning.firestoreId &&
-          savedCleaning.clientId === cleaning.clientId &&
-          savedCleaning.date === cleaning.date &&
-          savedCleaning.status !== "Cancelled"
+      alert(
+        "One or more selected helpers are invalid."
       );
+      return;
+    }
+
+    if (
+      !validStatuses.includes(
+        cleaning.status
+      )
+    ) {
+      alert(
+        "Please select a valid cleaning status."
+      );
+      return;
+    }
+
+    if (
+      cleaning.notes.trim().length >
+      1000
+    ) {
+      alert(
+        "Notes must be 1,000 characters or fewer."
+      );
+      return;
+    }
+
+    if (
+      cleaning.status !==
+      "Cancelled"
+    ) {
+      const sameClientSameDay =
+        cleanings.some(
+          (savedCleaning) =>
+            savedCleaning.firestoreId !==
+              cleaning.firestoreId &&
+            savedCleaning.clientId ===
+              cleaning.clientId &&
+            savedCleaning.date ===
+              cleaning.date &&
+            savedCleaning.status !==
+              "Cancelled"
+        );
 
       if (sameClientSameDay) {
         alert(
@@ -242,34 +296,46 @@ function EditCleaning() {
         return;
       }
 
-      const newStart = timeToMinutes(cleaning.startTime);
+      const newStart =
+        timeToMinutes(
+          cleaning.startTime
+        );
+
       const newEnd =
-        newStart + cleaning.estimatedHours * 60;
+        newStart +
+        cleaning.estimatedHours * 60;
 
-      const overlappingCleaning = cleanings.some(
-        (savedCleaning) => {
-          if (
-            savedCleaning.firestoreId === cleaning.firestoreId ||
-            savedCleaning.date !== cleaning.date ||
-            savedCleaning.status === "Cancelled"
-          ) {
-            return false;
+      const overlappingCleaning =
+        cleanings.some(
+          (savedCleaning) => {
+            if (
+              savedCleaning.firestoreId ===
+                cleaning.firestoreId ||
+              savedCleaning.date !==
+                cleaning.date ||
+              savedCleaning.status ===
+                "Cancelled"
+            ) {
+              return false;
+            }
+
+            const existingStart =
+              timeToMinutes(
+                savedCleaning.startTime
+              );
+
+            const existingEnd =
+              existingStart +
+              savedCleaning
+                .estimatedHours *
+                60;
+
+            return (
+              newStart < existingEnd &&
+              newEnd > existingStart
+            );
           }
-
-          const existingStart = timeToMinutes(
-            savedCleaning.startTime
-          );
-
-          const existingEnd =
-            existingStart +
-            savedCleaning.estimatedHours * 60;
-
-          return (
-            newStart < existingEnd &&
-            newEnd > existingStart
-          );
-        }
-      );
+        );
 
       if (overlappingCleaning) {
         alert(
@@ -284,17 +350,28 @@ function EditCleaning() {
     try {
       await updateCleaning({
         ...cleaning,
-        clientName: selectedClient.name,
-        clientPhone: selectedClient.phone,
-        clientAddress: selectedClient.address,
-        clientGateCode: selectedClient.gateCode,
-        clientNotes: selectedClient.cleaningInstructions,
-        notes: cleaning.notes.trim(),
+        clientName:
+          selectedClient.name,
+        clientPhone:
+          selectedClient.phone,
+        clientAddress:
+          selectedClient.address,
+        clientGateCode:
+          selectedClient.gateCode,
+        clientNotes:
+          selectedClient
+            .cleaningInstructions,
+        notes:
+          cleaning.notes.trim(),
       });
 
       navigate("/cleanings");
     } catch (error) {
-      console.error("Failed to update cleaning:", error);
+      console.error(
+        "Failed to update cleaning:",
+        error
+      );
+
       setErrorMessage(
         "The cleaning could not be updated. Please try again."
       );
@@ -308,7 +385,9 @@ function EditCleaning() {
       <div className="mx-auto w-full max-w-2xl">
         <button
           type="button"
-          onClick={() => navigate("/cleanings")}
+          onClick={() =>
+            navigate("/cleanings")
+          }
           className="mb-4 text-sm font-semibold text-[var(--blue-dark)] hover:underline"
         >
           ← Back to Cleanings
@@ -338,16 +417,24 @@ function EditCleaning() {
           required
           className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
         >
-          <option value="">Select a client</option>
+          <option value="">
+            Select a client
+          </option>
 
-          {clients.map((client) => (
-            <option
-              key={client.firestoreId}
-              value={client.firestoreId}
-            >
-              {client.name}
-            </option>
-          ))}
+          {clients.map(
+            (client) => (
+              <option
+                key={
+                  client.firestoreId
+                }
+                value={
+                  client.firestoreId
+                }
+              >
+                {client.name}
+              </option>
+            )
+          )}
         </select>
 
         <label
@@ -378,7 +465,9 @@ function EditCleaning() {
           id="startTime"
           name="startTime"
           type="time"
-          value={cleaning.startTime}
+          value={
+            cleaning.startTime
+          }
           onChange={handleChange}
           required
           className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
@@ -398,9 +487,13 @@ function EditCleaning() {
           min="0.5"
           max="24"
           step="0.5"
-          value={cleaning.estimatedHours}
+          value={
+            cleaning.estimatedHours
+          }
           onChange={handleChange}
-          onWheel={(event) => event.currentTarget.blur()}
+          onWheel={(event) =>
+            event.currentTarget.blur()
+          }
           required
           className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
         />
@@ -420,9 +513,15 @@ function EditCleaning() {
           required
           className="w-full rounded-md border border-[var(--border-soft)] bg-white px-4 py-3"
         >
-          <option value="Scheduled">Scheduled</option>
-          <option value="Completed">Completed</option>
-          <option value="Cancelled">Cancelled</option>
+          <option value="Scheduled">
+            Scheduled
+          </option>
+          <option value="Completed">
+            Completed
+          </option>
+          <option value="Cancelled">
+            Cancelled
+          </option>
         </select>
 
         <label
@@ -447,32 +546,40 @@ function EditCleaning() {
             Assign Helpers
           </p>
 
-          {helpers.length === 0 ? (
+          {helpers.length ===
+          0 ? (
             <p className="text-sm text-[var(--muted)]">
               No helpers available.
             </p>
           ) : (
-            helpers.map((helper) => (
-              <label
-                key={helper.uid}
-                className="mb-2 flex items-center gap-3"
-              >
-                <input
-                  type="checkbox"
-                  checked={cleaning.assignedHelpers.includes(
-                    helper.uid
-                  )}
-                  onChange={(event) =>
-                    toggleHelper(
-                      helper.uid,
-                      event.target.checked
-                    )
-                  }
-                />
+            helpers.map(
+              (helper) => (
+                <label
+                  key={helper.uid}
+                  className="mb-2 flex items-center gap-3"
+                >
+                  <input
+                    type="checkbox"
+                    checked={cleaning.assignedHelpers.includes(
+                      helper.uid
+                    )}
+                    onChange={(
+                      event
+                    ) =>
+                      toggleHelper(
+                        helper.uid,
+                        event.target
+                          .checked
+                      )
+                    }
+                  />
 
-                <span>{helper.email}</span>
-              </label>
-            ))
+                  <span>
+                    {helper.email}
+                  </span>
+                </label>
+              )
+            )
           )}
         </div>
 
@@ -485,7 +592,11 @@ function EditCleaning() {
         <div className="mt-6 flex gap-3">
           <button
             type="button"
-            onClick={() => navigate("/cleanings")}
+            onClick={() =>
+              navigate(
+                "/cleanings"
+              )
+            }
             disabled={saving}
             className="w-full rounded-xl border border-[var(--border-soft)] py-3 font-medium text-[var(--charcoal)] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -497,11 +608,101 @@ function EditCleaning() {
             disabled={saving}
             className="w-full rounded-xl bg-[var(--blue-dark)] py-3 font-medium text-white transition hover:bg-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving ? "Saving..." : "Save Changes"}
+            {saving
+              ? "Saving..."
+              : "Save Changes"}
           </button>
         </div>
       </form>
     </div>
+  );
+}
+
+function EditCleaning() {
+  const navigate = useNavigate();
+  const { cleaningId } =
+    useParams();
+
+  const cleaningContext =
+    useContext(CleaningContext);
+
+  const clientContext =
+    useContext(ClientContext);
+
+  const memberContext =
+    useContext(MemberContext);
+
+  if (!cleaningContext) {
+    throw new Error(
+      "CleaningContext not found"
+    );
+  }
+
+  if (!clientContext) {
+    throw new Error(
+      "ClientContext not found"
+    );
+  }
+
+  if (!memberContext) {
+    throw new Error(
+      "MemberContext not found"
+    );
+  }
+
+  const {
+    cleanings,
+    updateCleaning,
+  } = cleaningContext;
+
+  const { clients } =
+    clientContext;
+
+  const { helpers } =
+    memberContext;
+
+  const selectedCleaning =
+    cleanings.find(
+      (savedCleaning) =>
+        savedCleaning.firestoreId ===
+        cleaningId
+    );
+
+  if (!selectedCleaning) {
+    return (
+      <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
+        <p className="text-[var(--muted)]">
+          Cleaning not found.
+        </p>
+
+        <button
+          type="button"
+          onClick={() =>
+            navigate(
+              "/cleanings"
+            )
+          }
+          className="mt-4 font-semibold text-[var(--blue-dark)] hover:underline"
+        >
+          Back to Cleanings
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <EditCleaningForm
+      key={cleaningId}
+      initialCleaning={
+        selectedCleaning
+      }
+      cleanings={cleanings}
+      clients={clients}
+      helpers={helpers}
+      updateCleaning={
+        updateCleaning
+      }
+    />
   );
 }
 

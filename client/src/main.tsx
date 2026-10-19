@@ -2,10 +2,10 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { ClientProvider } from "./context/ClientContext";
-import { MemberProvider } from "./context/MemberContext";
-import { CleaningProvider } from "./context/CleaningContext";
-import { PaymentProvider } from "./context/PaymentContext";
+import { ClientProvider } from "./context/ClientProvider";
+import { MemberProvider } from "./context/MemberProvider";
+import { CleaningProvider } from "./context/CleaningProvider";
+import { PaymentProvider } from "./context/PaymentProvider";
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

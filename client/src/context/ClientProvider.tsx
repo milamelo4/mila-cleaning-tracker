@@ -1,12 +1,9 @@
 import {
-  createContext,
   useContext,
   useEffect,
   useState,
   type ReactNode,
 } from "react";
-
-import { MemberContext } from "./MemberContext";
 
 import {
   addDoc,
@@ -21,19 +18,11 @@ import {
 } from "firebase/firestore";
 
 import { useAuthState } from "react-firebase-hooks/auth";
+
 import { auth, db } from "../firebase";
 import type { Client } from "../types/client";
-
-type ClientContextType = {
-  clients: Client[];
-  loadingClients: boolean;
-  addClient: (client: Client) => Promise<void>;
-  updateClient: (client: Client) => Promise<void>;
-  deleteClient: (firestoreId: string) => Promise<void>;
-};
-
-export const ClientContext =
-  createContext<ClientContextType | null>(null);
+import { ClientContext } from "./ClientContext";
+import { MemberContext } from "./MemberContext";
 
 type ClientProviderProps = {
   children: ReactNode;
@@ -73,115 +62,115 @@ const getHelperSafeClientData = (
   clientPhone: client.phone,
   clientAddress: client.address.trim(),
   clientGateCode: client.gateCode.trim(),
-
-  // Only helper-safe instructions are copied
-  // into cleaning documents.
   clientNotes:
     client.cleaningInstructions.trim(),
 });
 
-const syncExistingCleaningClientData = async (
-  clients: Client[]
-) => {
-  const clientsByFirestoreId = new Map(
-    clients
-      .filter(
-        (client) => Boolean(client.firestoreId)
-      )
-      .map((client) => [
-        client.firestoreId as string,
-        client,
-      ])
-  );
-
-  const cleaningSnapshot =
-    await getDocs(cleaningsCollection);
-
-  const cleaningsToUpdate =
-    cleaningSnapshot.docs.filter(
-      (cleaningDocument) => {
-        const data =
-          cleaningDocument.data();
-
-        const clientId =
-          typeof data.clientId === "string"
-            ? data.clientId
-            : "";
-
-        const client =
-          clientsByFirestoreId.get(clientId);
-
-        if (!client) {
-          return false;
-        }
-
-        const safeData =
-          getHelperSafeClientData(client);
-
-        return (
-          data.clientName !==
-            safeData.clientName ||
-          data.clientPhone !==
-            safeData.clientPhone ||
-          data.clientAddress !==
-            safeData.clientAddress ||
-          data.clientGateCode !==
-            safeData.clientGateCode ||
-          data.clientNotes !==
-            safeData.clientNotes
-        );
-      }
+const syncExistingCleaningClientData =
+  async (
+    clients: Client[]
+  ) => {
+    const clientsByFirestoreId = new Map(
+      clients
+        .filter(
+          (client) =>
+            Boolean(client.firestoreId)
+        )
+        .map((client) => [
+          client.firestoreId as string,
+          client,
+        ])
     );
 
-  const batchSize = 450;
+    const cleaningSnapshot =
+      await getDocs(cleaningsCollection);
 
-  for (
-    let index = 0;
-    index < cleaningsToUpdate.length;
-    index += batchSize
-  ) {
-    const batch = writeBatch(db);
-
-    cleaningsToUpdate
-      .slice(index, index + batchSize)
-      .forEach(
+    const cleaningsToUpdate =
+      cleaningSnapshot.docs.filter(
         (cleaningDocument) => {
           const data =
             cleaningDocument.data();
 
           const clientId =
-            typeof data.clientId ===
-            "string"
+            typeof data.clientId === "string"
               ? data.clientId
               : "";
 
           const client =
-            clientsByFirestoreId.get(
-              clientId
-            );
+            clientsByFirestoreId.get(clientId);
 
           if (!client) {
-            return;
+            return false;
           }
 
-          batch.update(
-            cleaningDocument.ref,
-            getHelperSafeClientData(
-              client
-            )
+          const safeData =
+            getHelperSafeClientData(client);
+
+          return (
+            data.clientName !==
+              safeData.clientName ||
+            data.clientPhone !==
+              safeData.clientPhone ||
+            data.clientAddress !==
+              safeData.clientAddress ||
+            data.clientGateCode !==
+              safeData.clientGateCode ||
+            data.clientNotes !==
+              safeData.clientNotes
           );
         }
       );
 
-    await batch.commit();
-  }
-};
+    const batchSize = 450;
+
+    for (
+      let index = 0;
+      index < cleaningsToUpdate.length;
+      index += batchSize
+    ) {
+      const batch = writeBatch(db);
+
+      cleaningsToUpdate
+        .slice(index, index + batchSize)
+        .forEach(
+          (cleaningDocument) => {
+            const data =
+              cleaningDocument.data();
+
+            const clientId =
+              typeof data.clientId ===
+              "string"
+                ? data.clientId
+                : "";
+
+            const client =
+              clientsByFirestoreId.get(
+                clientId
+              );
+
+            if (!client) {
+              return;
+            }
+
+            batch.update(
+              cleaningDocument.ref,
+              getHelperSafeClientData(
+                client
+              )
+            );
+          }
+        );
+
+      await batch.commit();
+    }
+  };
 
 export function ClientProvider({
   children,
 }: ClientProviderProps) {
   const [clients, setClients] =
     useState<Client[]>([]);
+
   const [
     loadingClients,
     setLoadingClients,
@@ -207,13 +196,7 @@ export function ClientProvider({
         return;
       }
 
-      if (!user || !role) {
-        setClients([]);
-        setLoadingClients(false);
-        return;
-      }
-
-      if (role !== "admin") {
+      if (!user || role !== "admin") {
         setClients([]);
         setLoadingClients(false);
         return;
@@ -261,6 +244,7 @@ export function ClientProvider({
           "Failed to load clients:",
           error
         );
+
         setClients([]);
       } finally {
         setLoadingClients(false);
@@ -372,17 +356,12 @@ export function ClientProvider({
       ),
       assignedHelpers:
         client.assignedHelpers ?? [],
-
-      // Admin-only fields
       notes:
         client.notes.trim(),
       pricingNotes:
         client.pricingNotes.trim(),
-
-      // Helper-safe field
       cleaningInstructions:
         client.cleaningInstructions.trim(),
-
       active: Boolean(client.active),
     };
 
