@@ -46,14 +46,82 @@ const normalizeClient = (
   client: Client
 ): Client => ({
   ...client,
+
+  billingType:
+    client.billingType === "Fixed Monthly"
+      ? "Fixed Monthly"
+      : "Per Cleaning",
+
+  pricePerCleaning:
+    typeof client.pricePerCleaning === "number"
+      ? client.pricePerCleaning
+      : 0,
+
+  monthlyRate:
+    typeof client.monthlyRate === "number"
+      ? client.monthlyRate
+      : 0,
+
   assignedHelpers:
     client.assignedHelpers ?? [],
-  notes: client.notes ?? "",
+
+  notes:
+    client.notes ?? "",
+
   pricingNotes:
     client.pricingNotes ?? "",
+
   cleaningInstructions:
     client.cleaningInstructions ?? "",
 });
+
+const getClientData = (
+  client: Client
+): Omit<Client, "firestoreId"> => {
+  return {
+    id: client.id,
+    name: client.name.trim(),
+    phone: client.phone,
+    address: client.address.trim(),
+    gateCode: client.gateCode.trim(),
+
+    billingType: client.billingType,
+
+    pricePerCleaning: Number(
+      client.pricePerCleaning
+    ),
+
+    monthlyRate: Number(
+      client.monthlyRate
+    ),
+
+    startDate: client.startDate,
+
+    estimatedHours: Number(
+      client.estimatedHours
+    ),
+
+    frequency: client.frequency,
+
+    helperNeeded: Boolean(
+      client.helperNeeded
+    ),
+
+    assignedHelpers:
+      client.assignedHelpers ?? [],
+
+    notes:
+      client.notes.trim(),
+
+    pricingNotes:
+      client.pricingNotes.trim(),
+
+    cleaningInstructions:
+      client.cleaningInstructions.trim(),
+
+    active: Boolean(client.active),
+  };
+};
 
 const getHelperSafeClientData = (
   client: Client
@@ -83,7 +151,9 @@ const syncExistingCleaningClientData =
     );
 
     const cleaningSnapshot =
-      await getDocs(cleaningsCollection);
+      await getDocs(
+        cleaningsCollection
+      );
 
     const cleaningsToUpdate =
       cleaningSnapshot.docs.filter(
@@ -97,14 +167,18 @@ const syncExistingCleaningClientData =
               : "";
 
           const client =
-            clientsByFirestoreId.get(clientId);
+            clientsByFirestoreId.get(
+              clientId
+            );
 
           if (!client) {
             return false;
           }
 
           const safeData =
-            getHelperSafeClientData(client);
+            getHelperSafeClientData(
+              client
+            );
 
           return (
             data.clientName !==
@@ -128,10 +202,14 @@ const syncExistingCleaningClientData =
       index < cleaningsToUpdate.length;
       index += batchSize
     ) {
-      const batch = writeBatch(db);
+      const batch =
+        writeBatch(db);
 
       cleaningsToUpdate
-        .slice(index, index + batchSize)
+        .slice(
+          index,
+          index + batchSize
+        )
         .forEach(
           (cleaningDocument) => {
             const data =
@@ -176,7 +254,8 @@ export function ClientProvider({
     setLoadingClients,
   ] = useState(true);
 
-  const [user] = useAuthState(auth);
+  const [user] =
+    useAuthState(auth);
 
   const memberContext =
     useContext(MemberContext);
@@ -191,68 +270,141 @@ export function ClientProvider({
     memberContext;
 
   useEffect(() => {
-    const loadClients = async () => {
-      if (loadingRole) {
-        return;
-      }
+    const loadClients =
+      async () => {
+        if (loadingRole) {
+          return;
+        }
 
-      if (!user || role !== "admin") {
-        setClients([]);
-        setLoadingClients(false);
-        return;
-      }
+        if (
+          !user ||
+          role !== "admin"
+        ) {
+          setClients([]);
+          setLoadingClients(false);
+          return;
+        }
 
-      setLoadingClients(true);
-
-      try {
-        const snapshot =
-          await getDocs(
-            clientsCollection
-          );
-
-        const savedClients =
-          snapshot.docs.map(
-            (clientDocument) => {
-              const data =
-                clientDocument.data() as Omit<
-                  Client,
-                  "firestoreId"
-                >;
-
-              return normalizeClient({
-                ...data,
-                firestoreId:
-                  clientDocument.id,
-              });
-            }
-          );
-
-        setClients(savedClients);
+        setLoadingClients(true);
 
         try {
-          await syncExistingCleaningClientData(
+          const snapshot =
+            await getDocs(
+              clientsCollection
+            );
+
+          const savedClients =
+            snapshot.docs.map(
+              (clientDocument) => {
+                const data =
+                  clientDocument.data() as Partial<
+                    Omit<
+                      Client,
+                      "firestoreId"
+                    >
+                  >;
+
+                return normalizeClient({
+                  id:
+                    data.id ?? 0,
+
+                  name:
+                    data.name ?? "",
+
+                  phone:
+                    data.phone ?? "",
+
+                  address:
+                    data.address ?? "",
+
+                  gateCode:
+                    data.gateCode ?? "",
+
+                  billingType:
+                    data.billingType ===
+                    "Fixed Monthly"
+                      ? "Fixed Monthly"
+                      : "Per Cleaning",
+
+                  pricePerCleaning:
+                    data.pricePerCleaning ??
+                    0,
+
+                  monthlyRate:
+                    data.monthlyRate ?? 0,
+
+                  startDate:
+                    data.startDate ?? "",
+
+                  estimatedHours:
+                    data.estimatedHours ??
+                    0,
+
+                  frequency:
+                    data.frequency ??
+                    "As Needed",
+
+                  helperNeeded:
+                    data.helperNeeded ??
+                    false,
+
+                  assignedHelpers:
+                    data.assignedHelpers ??
+                    [],
+
+                  notes:
+                    data.notes ?? "",
+
+                  pricingNotes:
+                    data.pricingNotes ?? "",
+
+                  cleaningInstructions:
+                    data.cleaningInstructions ??
+                    "",
+
+                  active:
+                    data.active ?? true,
+
+                  firestoreId:
+                    clientDocument.id,
+                });
+              }
+            );
+
+          setClients(
             savedClients
           );
+
+          try {
+            await syncExistingCleaningClientData(
+              savedClients
+            );
+          } catch (error) {
+            console.error(
+              "Failed to sync helper-safe cleaning details:",
+              error
+            );
+          }
         } catch (error) {
           console.error(
-            "Failed to sync helper-safe cleaning details:",
+            "Failed to load clients:",
             error
           );
-        }
-      } catch (error) {
-        console.error(
-          "Failed to load clients:",
-          error
-        );
 
-        setClients([]);
-      } finally {
-        setLoadingClients(false);
-      }
-    };
+          setClients([]);
+        } finally {
+          setLoadingClients(
+            false
+          );
+        }
+      };
 
     void loadClients();
-  }, [user, role, loadingRole]);
+  }, [
+    user,
+    role,
+    loadingRole,
+  ]);
 
   const addClient = async (
     client: Client
@@ -269,32 +421,37 @@ export function ClientProvider({
       );
     }
 
-    const normalizedClient =
-      normalizeClient({
-        ...client,
-        name: client.name.trim(),
-        address:
-          client.address.trim(),
-        gateCode:
-          client.gateCode.trim(),
-        notes: client.notes.trim(),
-        pricingNotes:
-          client.pricingNotes.trim(),
-        cleaningInstructions:
-          client.cleaningInstructions.trim(),
-      });
+    if (
+      !Number.isInteger(
+        client.id
+      )
+    ) {
+      throw new Error(
+        "Client ID must be an integer."
+      );
+    }
 
-    const docRef = await addDoc(
-      clientsCollection,
-      normalizedClient
-    );
+    const normalizedClient =
+      normalizeClient(client);
+
+    const clientData =
+      getClientData(
+        normalizedClient
+      );
+
+    const docRef =
+      await addDoc(
+        clientsCollection,
+        clientData
+      );
 
     setClients(
       (previousClients) => [
         ...previousClients,
         {
-          ...normalizedClient,
-          firestoreId: docRef.id,
+          ...clientData,
+          firestoreId:
+            docRef.id,
         },
       ]
     );
@@ -321,60 +478,39 @@ export function ClientProvider({
       );
     }
 
-    if (!Number.isInteger(client.id)) {
+    if (
+      !Number.isInteger(
+        client.id
+      )
+    ) {
       throw new Error(
         "Client ID must be an integer."
       );
     }
 
     const clientDocument = doc(
-      db,
-      "businesses",
-      "mila-cleaning-tracker",
-      "clients",
+      clientsCollection,
       client.firestoreId
     );
 
-    const clientData = {
-      id: client.id,
-      name: client.name.trim(),
-      phone: client.phone,
-      address:
-        client.address.trim(),
-      gateCode:
-        client.gateCode.trim(),
-      pricePerCleaning: Number(
-        client.pricePerCleaning
-      ),
-      startDate: client.startDate,
-      estimatedHours: Number(
-        client.estimatedHours
-      ),
-      frequency: client.frequency,
-      helperNeeded: Boolean(
-        client.helperNeeded
-      ),
-      assignedHelpers:
-        client.assignedHelpers ?? [],
-      notes:
-        client.notes.trim(),
-      pricingNotes:
-        client.pricingNotes.trim(),
-      cleaningInstructions:
-        client.cleaningInstructions.trim(),
-      active: Boolean(client.active),
-    };
+    const normalizedClient =
+      normalizeClient(client);
+
+    const clientData =
+      getClientData(
+        normalizedClient
+      );
 
     await updateDoc(
       clientDocument,
       clientData
     );
 
-    const updatedClient =
-      normalizeClient({
-        ...client,
-        ...clientData,
-      });
+    const updatedClient: Client = {
+      ...clientData,
+      firestoreId:
+        client.firestoreId,
+    };
 
     const relatedCleaningsQuery =
       query(
@@ -404,7 +540,8 @@ export function ClientProvider({
       relatedCleanings.docs.length;
       index += batchSize
     ) {
-      const batch = writeBatch(db);
+      const batch =
+        writeBatch(db);
 
       relatedCleanings.docs
         .slice(
@@ -450,13 +587,11 @@ export function ClientProvider({
       );
     }
 
-    const clientDocument = doc(
-      db,
-      "businesses",
-      "mila-cleaning-tracker",
-      "clients",
-      firestoreId
-    );
+    const clientDocument =
+      doc(
+        clientsCollection,
+        firestoreId
+      );
 
     await deleteDoc(
       clientDocument

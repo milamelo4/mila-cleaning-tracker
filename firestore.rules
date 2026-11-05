@@ -46,7 +46,9 @@ service cloud.firestore {
               "phone",
               "address",
               "gateCode",
+              "billingType",
               "pricePerCleaning",
+              "monthlyRate",
               "startDate",
               "estimatedHours",
               "frequency",
@@ -63,7 +65,9 @@ service cloud.firestore {
               "phone",
               "address",
               "gateCode",
+              "billingType",
               "pricePerCleaning",
+              "monthlyRate",
               "startDate",
               "estimatedHours",
               "frequency",
@@ -76,43 +80,55 @@ service cloud.firestore {
             ])
 
             && data.id is number
-
             && data.name is string
-
             && data.phone is string
-
             && data.address is string
-
             && data.gateCode is string
 
+            && data.billingType is string
+            && data.billingType in [
+              "Per Cleaning",
+              "Fixed Monthly"
+            ]
+
             && data.pricePerCleaning is number
+            && data.pricePerCleaning >= 0
+            && data.pricePerCleaning <= 10000
+
+            && data.monthlyRate is number
+            && data.monthlyRate >= 0
+            && data.monthlyRate <= 50000
+
+            && (
+              (
+                data.billingType == "Per Cleaning"
+                && data.pricePerCleaning >= 0.01
+              )
+              ||
+              (
+                data.billingType == "Fixed Monthly"
+                && data.monthlyRate >= 0.01
+              )
+            )
 
             && data.startDate is string
-
             && data.estimatedHours is number
-
             && data.frequency is string
-
             && data.helperNeeded is bool
-
             && data.assignedHelpers is list
 
-            // Private admin notes.
             && data.notes is string
             && data.notes.size() <= 1000
 
-            // Private pricing / raise history.
             && data.pricingNotes is string
             && data.pricingNotes.size() <= 1000
 
-            // Helper-safe cleaning instructions.
             && data.cleaningInstructions is string
             && data.cleaningInstructions.size() <= 1000
 
             && data.active is bool;
         }
 
-        // Full client documents contain financial/admin-only information.
         allow read: if isAdmin();
 
         allow create, update: if isAdmin()
@@ -172,7 +188,6 @@ service cloud.firestore {
             && data.clientGateCode is string
             && data.clientGateCode.size() <= 100
 
-            // This is the helper-safe copy of client.cleaningInstructions.
             && data.clientNotes is string
             && data.clientNotes.size() <= 1000
 
@@ -262,11 +277,11 @@ service cloud.firestore {
 
             && data.amountCharged is number
             && data.amountCharged >= 0.01
-            && data.amountCharged <= 10000
+            && data.amountCharged <= 50000
 
             && data.actualHours is number
             && data.actualHours >= 0.25
-            && data.actualHours <= 24
+            && data.actualHours <= 744
 
             && data.helperPayout is number
             && data.helperPayout >= 0
@@ -294,28 +309,18 @@ service cloud.firestore {
         }
 
         function validPaymentLinks(data) {
-          return exists(
-              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
-            )
-            && exists(
-              /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
-            )
+          let cleaningAfter = getAfter(
+            /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
+          );
 
-            && get(
-              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
-            ).data.clientId == data.clientId
+          let client = get(
+            /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
+          );
 
-            && get(
-              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
-            ).data.date == data.cleaningDate
-
-            && get(
-              /databases/$(database)/documents/businesses/$(businessId)/cleanings/$(data.cleaningId)
-            ).data.status == "Completed"
-
-            && get(
-              /databases/$(database)/documents/businesses/$(businessId)/clients/$(data.clientId)
-            ).data.name == data.clientName;
+          return cleaningAfter.data.clientId == data.clientId
+            && cleaningAfter.data.date == data.cleaningDate
+            && cleaningAfter.data.status == "Completed"
+            && client.data.name == data.clientName;
         }
 
         allow read: if isAdmin();

@@ -1,5 +1,6 @@
 import { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { ClientContext } from "../context/ClientContext";
 import type { Client } from "../types/client";
 
@@ -13,21 +14,27 @@ const emptyClient: ClientFormState = {
   phone: "",
   address: "",
   gateCode: "",
+
+  billingType: "Per Cleaning",
   pricePerCleaning: 0,
+  monthlyRate: 0,
+
   startDate: "",
   estimatedHours: 0,
   frequency: "Weekly",
+
   notes: "",
   pricingNotes: "",
   cleaningInstructions: "",
+
   assignedHelpers: [],
 };
 
 function AddClient() {
-  const [client, setClient] =
-    useState<ClientFormState>(emptyClient);
+  const [client, setClient] = useState<ClientFormState>(emptyClient);
 
   const clientContext = useContext(ClientContext);
+
   const navigate = useNavigate();
 
   if (!clientContext) {
@@ -38,40 +45,31 @@ function AddClient() {
 
   const handleChange = (
     e: React.ChangeEvent<
-      HTMLInputElement |
-      HTMLTextAreaElement |
-      HTMLSelectElement
-    >
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
     const { name, value } = e.target;
 
     let formattedValue: string | number = value;
 
     if (name === "phone") {
-      const numbers = value
-        .replace(/\D/g, "")
-        .slice(0, 10);
+      const numbers = value.replace(/\D/g, "").slice(0, 10);
 
       if (numbers.length <= 3) {
         formattedValue = numbers;
       } else if (numbers.length <= 6) {
-        formattedValue = `(${numbers.slice(
-          0,
-          3
-        )}) ${numbers.slice(3)}`;
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
       } else {
-        formattedValue = `(${numbers.slice(
-          0,
-          3
-        )}) ${numbers.slice(
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(
           3,
-          6
+          6,
         )}-${numbers.slice(6)}`;
       }
     }
 
     if (
       name === "pricePerCleaning" ||
+      name === "monthlyRate" ||
       name === "estimatedHours"
     ) {
       formattedValue = Number(value);
@@ -83,23 +81,22 @@ function AddClient() {
     }));
   };
 
-  const handleSubmit = async (
-    e: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     const name = client.name.trim();
+
     const address = client.address.trim();
+
     const gateCode = client.gateCode.trim();
 
     const notes = client.notes.trim();
-    const pricingNotes =
-      client.pricingNotes.trim();
-    const cleaningInstructions =
-      client.cleaningInstructions.trim();
 
-    const phoneDigits =
-      client.phone.replace(/\D/g, "");
+    const pricingNotes = client.pricingNotes.trim();
+
+    const cleaningInstructions = client.cleaningInstructions.trim();
+
+    const phoneDigits = client.phone.replace(/\D/g, "");
 
     const validFrequencies = [
       "Weekly",
@@ -110,51 +107,65 @@ function AddClient() {
     ];
 
     if (name.length < 2 || name.length > 100) {
-      alert(
-        "Client name must be between 2 and 100 characters."
-      );
+      alert("Client name must be between 2 and 100 characters.");
+
       return;
     }
 
     if (phoneDigits.length !== 10) {
-      alert(
-        "Please enter a valid 10-digit phone number."
-      );
+      alert("Please enter a valid 10-digit phone number.");
+
       return;
     }
 
-    if (
-      address.length < 5 ||
-      address.length > 200
-    ) {
+    if (address.length < 5 || address.length > 200) {
       alert("Please enter a valid address.");
+
       return;
     }
 
     if (gateCode.length > 50) {
-      alert(
-        "Gate or garage code must be 50 characters or fewer."
-      );
+      alert("Gate or garage code must be 50 characters or fewer.");
+
       return;
     }
 
     if (
-      !Number.isFinite(client.pricePerCleaning) ||
-      client.pricePerCleaning < 0.01 ||
-      client.pricePerCleaning > 10000
+      client.billingType !== "Per Cleaning" &&
+      client.billingType !== "Fixed Monthly"
     ) {
-      alert(
-        "Price must be between $0.01 and $10,000."
-      );
+      alert("Please select a valid billing type.");
+
       return;
     }
 
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(
-        client.startDate
-      )
-    ) {
+    if (client.billingType === "Per Cleaning") {
+      if (
+        !Number.isFinite(client.pricePerCleaning) ||
+        client.pricePerCleaning < 0.01 ||
+        client.pricePerCleaning > 10000
+      ) {
+        alert("Price per cleaning must be between $0.01 and $10,000.");
+
+        return;
+      }
+    }
+
+    if (client.billingType === "Fixed Monthly") {
+      if (
+        !Number.isFinite(client.monthlyRate) ||
+        client.monthlyRate < 0.01 ||
+        client.monthlyRate > 50000
+      ) {
+        alert("Monthly rate must be between $0.01 and $50,000.");
+
+        return;
+      }
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(client.startDate)) {
       alert("Please enter a valid start date.");
+
       return;
     }
 
@@ -163,60 +174,61 @@ function AddClient() {
       client.estimatedHours < 0.5 ||
       client.estimatedHours > 24
     ) {
-      alert(
-        "Estimated hours must be between 0.5 and 24."
-      );
+      alert("Estimated hours must be between 0.5 and 24.");
+
       return;
     }
 
-    if (
-      !validFrequencies.includes(
-        client.frequency
-      )
-    ) {
-      alert(
-        "Please select a valid frequency."
-      );
+    if (!validFrequencies.includes(client.frequency)) {
+      alert("Please select a valid frequency.");
+
       return;
     }
 
     if (notes.length > 1000) {
-      alert(
-        "Admin notes must be 1,000 characters or fewer."
-      );
+      alert("Admin notes must be 1,000 characters or fewer.");
+
       return;
     }
 
     if (pricingNotes.length > 1000) {
-      alert(
-        "Pricing notes must be 1,000 characters or fewer."
-      );
+      alert("Pricing notes must be 1,000 characters or fewer.");
+
       return;
     }
 
     if (cleaningInstructions.length > 1000) {
-      alert(
-        "Cleaning instructions must be 1,000 characters or fewer."
-      );
+      alert("Cleaning instructions must be 1,000 characters or fewer.");
+
       return;
     }
 
     await addClient({
       id: Date.now(),
+
       ...client,
+
       name,
       address,
       gateCode,
       notes,
       pricingNotes,
       cleaningInstructions,
+
+      pricePerCleaning: client.pricePerCleaning,
+
+      monthlyRate:
+        client.billingType === "Fixed Monthly" ? client.monthlyRate : 0,
+
       helperNeeded: false,
-      assignedHelpers:
-        client.assignedHelpers,
+
+      assignedHelpers: client.assignedHelpers,
+
       active: true,
     });
 
     setClient(emptyClient);
+
     navigate("/clients");
   };
 
@@ -224,9 +236,7 @@ function AddClient() {
     <div>
       <div className="mx-auto w-full max-w-2xl">
         <button
-          onClick={() =>
-            navigate("/clients")
-          }
+          onClick={() => navigate("/clients")}
           className="mb-4 text-sm font-semibold text-[var(--blue-dark)] hover:underline"
         >
           ← Back to Clients
@@ -248,16 +258,16 @@ function AddClient() {
         className="max-w-2xl rounded-lg border border-[var(--border-soft)] bg-[var(--card)] p-6 shadow"
       >
         <div className="mb-4">
-          <label 
-          htmlFor="name"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="name"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Name
           </label>
 
           <input
             type="text"
             id="name"
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="name"
             value={client.name}
             onChange={handleChange}
@@ -265,20 +275,21 @@ function AddClient() {
             required
             minLength={2}
             maxLength={100}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="phone"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="phone"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Phone
           </label>
 
           <input
             type="tel"
             id="phone"
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="phone"
             value={client.phone}
             onChange={handleChange}
@@ -286,20 +297,21 @@ function AddClient() {
             required
             inputMode="tel"
             maxLength={14}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="address"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="address"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Address
           </label>
 
           <input
             type="text"
             id="address"
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="address"
             value={client.address}
             onChange={handleChange}
@@ -307,13 +319,15 @@ function AddClient() {
             required
             minLength={5}
             maxLength={200}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="gateCode"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="gateCode"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Gate / Garage Code
           </label>
 
@@ -323,41 +337,93 @@ function AddClient() {
             name="gateCode"
             value={client.gateCode}
             onChange={handleChange}
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
             placeholder="1234"
             maxLength={50}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="pricePerCleaning"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
-            Price Per Cleaning
+          <label
+            htmlFor="billingType"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
+            Billing Type
           </label>
 
-          <input
-            type="number"
-            id="pricePerCleaning"
-            name="pricePerCleaning"
-            value={client.pricePerCleaning}
+          <select
+            id="billingType"
+            name="billingType"
+            value={client.billingType}
             onChange={handleChange}
-            onWheel={(event) =>
-              event.currentTarget.blur()
-            }
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
-            placeholder="150"
-            required
-            min="0.01"
-            max="10000"
-            step="0.01"
-          />
+          >
+            <option value="Per Cleaning">Per Cleaning</option>
+
+            <option value="Fixed Monthly">Fixed Monthly</option>
+          </select>
+
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Fixed Monthly means the client pays the same amount each month, even
+            when the calendar has an extra cleaning week.
+          </p>
         </div>
 
+        {client.billingType === "Per Cleaning" ? (
+          <div className="mb-4">
+            <label
+              htmlFor="pricePerCleaning"
+              className="mb-2 block font-medium text-[var(--charcoal)]"
+            >
+              Price Per Cleaning
+            </label>
+
+            <input
+              type="number"
+              id="pricePerCleaning"
+              name="pricePerCleaning"
+              value={client.pricePerCleaning}
+              onChange={handleChange}
+              onWheel={(event) => event.currentTarget.blur()}
+              placeholder="150"
+              required
+              min="0.01"
+              max="10000"
+              step="0.01"
+              className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            />
+          </div>
+        ) : (
+          <div className="mb-4">
+            <label
+              htmlFor="monthlyRate"
+              className="mb-2 block font-medium text-[var(--charcoal)]"
+            >
+              Monthly Rate
+            </label>
+
+            <input
+              type="number"
+              id="monthlyRate"
+              name="monthlyRate"
+              value={client.monthlyRate}
+              onChange={handleChange}
+              onWheel={(event) => event.currentTarget.blur()}
+              placeholder="1000"
+              required
+              min="0.01"
+              max="50000"
+              step="0.01"
+              className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            />
+          </div>
+        )}
+
         <div className="mb-4">
-          <label 
-          htmlFor="startDate"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="startDate"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Start Date
           </label>
 
@@ -373,9 +439,10 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="estimatedHours"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="estimatedHours"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Estimated Hours Per Cleaning
           </label>
 
@@ -385,44 +452,48 @@ function AddClient() {
             name="estimatedHours"
             value={client.estimatedHours}
             onChange={handleChange}
-            onWheel={(event) =>
-              event.currentTarget.blur()
-            }
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            onWheel={(event) => event.currentTarget.blur()}
             placeholder="3"
             required
             min="0.5"
             max="24"
             step="0.25"
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           />
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="frequency"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="frequency"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Frequency
           </label>
 
           <select
             id="frequency"
-            className="w-full rounded-md border border-[var(--border-soft)] p-3"
             name="frequency"
             value={client.frequency}
             onChange={handleChange}
+            className="w-full rounded-md border border-[var(--border-soft)] p-3"
           >
             <option>Weekly</option>
+
             <option>Twice Weekly</option>
+
             <option>Twice Monthly</option>
+
             <option>Monthly</option>
+
             <option>As Needed</option>
           </select>
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="notes"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="notes"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Admin Notes
           </label>
 
@@ -443,9 +514,10 @@ function AddClient() {
         </div>
 
         <div className="mb-4">
-          <label 
-          htmlFor="pricingNotes"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="pricingNotes"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Pricing Notes
           </label>
 
@@ -466,9 +538,10 @@ function AddClient() {
         </div>
 
         <div className="mb-6">
-          <label 
-          htmlFor="cleaningInstructions"
-          className="mb-2 block font-medium text-[var(--charcoal)]">
+          <label
+            htmlFor="cleaningInstructions"
+            className="mb-2 block font-medium text-[var(--charcoal)]"
+          >
             Cleaning Instructions
           </label>
 
@@ -480,9 +553,7 @@ function AddClient() {
             id="cleaningInstructions"
             rows={4}
             name="cleaningInstructions"
-            value={
-              client.cleaningInstructions
-            }
+            value={client.cleaningInstructions}
             maxLength={1000}
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"

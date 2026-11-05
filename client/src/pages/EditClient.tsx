@@ -1,28 +1,27 @@
-import {
-  useContext,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-} from "react";
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
+import { useContext, useState, type ChangeEvent, type FormEvent } from "react";
 
-import {
-  ClientContext,
-} from "../context/ClientContext";
+import { useNavigate, useParams } from "react-router-dom";
+
+import { ClientContext } from "../context/ClientContext";
+
 import type { Client } from "../types/client";
 
-const normalizeClient = (
-  client: Client
-): Client => ({
+const normalizeClient = (client: Client): Client => ({
   ...client,
+
+  billingType:
+    client.billingType === "Fixed Monthly" ? "Fixed Monthly" : "Per Cleaning",
+
+  pricePerCleaning:
+    typeof client.pricePerCleaning === "number" ? client.pricePerCleaning : 0,
+
+  monthlyRate: typeof client.monthlyRate === "number" ? client.monthlyRate : 0,
+
   notes: client.notes ?? "",
-  pricingNotes:
-    client.pricingNotes ?? "",
-  cleaningInstructions:
-    client.cleaningInstructions ?? "",
+
+  pricingNotes: client.pricingNotes ?? "",
+
+  cleaningInstructions: client.cleaningInstructions ?? "",
 });
 
 const validFrequencies: Client["frequency"][] = [
@@ -35,225 +34,172 @@ const validFrequencies: Client["frequency"][] = [
 
 type EditClientFormProps = {
   initialClient: Client;
-  updateClient: (
-    client: Client
-  ) => Promise<void>;
+
+  updateClient: (client: Client) => Promise<void>;
 };
 
-function EditClientForm({
-  initialClient,
-  updateClient,
-}: EditClientFormProps) {
+function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
   const navigate = useNavigate();
 
-  const [client, setClient] =
-    useState<Client>(() =>
-      normalizeClient(initialClient)
-    );
+  const [client, setClient] = useState<Client>(() =>
+    normalizeClient(initialClient),
+  );
 
-  const [saving, setSaving] =
-    useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [
-    errorMessage,
-    setErrorMessage,
-  ] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const handleChange = (
     event: ChangeEvent<
-      | HTMLInputElement
-      | HTMLTextAreaElement
-      | HTMLSelectElement
-    >
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
-    const { name, value } =
-      event.target;
+    const { name, value } = event.target;
 
-    let formattedValue:
-      | string
-      | number = value;
+    let formattedValue: string | number = value;
 
     if (name === "phone") {
-      const numbers = value
-        .replace(/\D/g, "")
-        .slice(0, 10);
+      const numbers = value.replace(/\D/g, "").slice(0, 10);
 
       if (numbers.length <= 3) {
         formattedValue = numbers;
-      } else if (
-        numbers.length <= 6
-      ) {
-        formattedValue =
-          `(${numbers.slice(
-            0,
-            3
-          )}) ${numbers.slice(3)}`;
+      } else if (numbers.length <= 6) {
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`;
       } else {
-        formattedValue =
-          `(${numbers.slice(
-            0,
-            3
-          )}) ${numbers.slice(
-            3,
-            6
-          )}-${numbers.slice(6)}`;
+        formattedValue = `(${numbers.slice(0, 3)}) ${numbers.slice(
+          3,
+          6,
+        )}-${numbers.slice(6)}`;
       }
     }
 
     if (
       name === "pricePerCleaning" ||
+      name === "monthlyRate" ||
       name === "estimatedHours"
     ) {
       formattedValue = Number(value);
     }
 
-    setClient(
-      (previousClient) => ({
-        ...previousClient,
-        [name]: formattedValue,
-      })
-    );
+    setClient((previousClient) => ({
+      ...previousClient,
+      [name]: formattedValue,
+    }));
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     setErrorMessage("");
 
-    const name =
-      client.name.trim();
+    const name = client.name.trim();
 
-    const address =
-      client.address.trim();
+    const address = client.address.trim();
 
-    const gateCode =
-      client.gateCode.trim();
+    const gateCode = client.gateCode.trim();
 
-    const notes =
-      client.notes.trim();
+    const notes = client.notes.trim();
 
-    const pricingNotes =
-      client.pricingNotes.trim();
+    const pricingNotes = client.pricingNotes.trim();
 
-    const cleaningInstructions =
-      client.cleaningInstructions.trim();
+    const cleaningInstructions = client.cleaningInstructions.trim();
 
-    const phoneDigits =
-      client.phone.replace(
-        /\D/g,
-        ""
-      );
+    const phoneDigits = client.phone.replace(/\D/g, "");
 
-    if (
-      name.length < 2 ||
-      name.length > 100
-    ) {
-      alert(
-        "Client name must be between 2 and 100 characters."
-      );
+    if (name.length < 2 || name.length > 100) {
+      alert("Client name must be between 2 and 100 characters.");
+
       return;
     }
 
-    if (
-      phoneDigits.length !== 10
-    ) {
-      alert(
-        "Please enter a valid 10-digit phone number."
-      );
+    if (phoneDigits.length !== 10) {
+      alert("Please enter a valid 10-digit phone number.");
+
       return;
     }
 
-    if (
-      address.length < 5 ||
-      address.length > 200
-    ) {
-      alert(
-        "Please enter a valid address."
-      );
+    if (address.length < 5 || address.length > 200) {
+      alert("Please enter a valid address.");
+
       return;
     }
 
     if (gateCode.length > 50) {
-      alert(
-        "Gate or garage code must be 50 characters or fewer."
-      );
+      alert("Gate or garage code must be 50 characters or fewer.");
+
       return;
     }
 
     if (
-      !Number.isFinite(
-        client.pricePerCleaning
-      ) ||
-      client.pricePerCleaning <
-        0.01 ||
-      client.pricePerCleaning >
-        10000
+      client.billingType !== "Per Cleaning" &&
+      client.billingType !== "Fixed Monthly"
     ) {
-      alert(
-        "Price must be between $0.01 and $10,000."
-      );
+      alert("Please select a valid billing type.");
+
+      return;
+    }
+
+    if (client.billingType === "Per Cleaning") {
+      if (
+        !Number.isFinite(client.pricePerCleaning) ||
+        client.pricePerCleaning < 0.01 ||
+        client.pricePerCleaning > 10000
+      ) {
+        alert("Price per cleaning must be between $0.01 and $10,000.");
+
+        return;
+      }
+    }
+
+    if (client.billingType === "Fixed Monthly") {
+      if (
+        !Number.isFinite(client.monthlyRate) ||
+        client.monthlyRate < 0.01 ||
+        client.monthlyRate > 50000
+      ) {
+        alert("Monthly rate must be between $0.01 and $50,000.");
+
+        return;
+      }
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(client.startDate)) {
+      alert("Please enter a valid start date.");
+
       return;
     }
 
     if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(
-        client.startDate
-      )
-    ) {
-      alert(
-        "Please enter a valid start date."
-      );
-      return;
-    }
-
-    if (
-      !Number.isFinite(
-        client.estimatedHours
-      ) ||
+      !Number.isFinite(client.estimatedHours) ||
       client.estimatedHours < 0.5 ||
       client.estimatedHours > 24
     ) {
-      alert(
-        "Estimated hours must be between 0.5 and 24."
-      );
+      alert("Estimated hours must be between 0.5 and 24.");
+
       return;
     }
 
-    if (
-      !validFrequencies.includes(
-        client.frequency
-      )
-    ) {
-      alert(
-        "Please select a valid frequency."
-      );
+    if (!validFrequencies.includes(client.frequency)) {
+      alert("Please select a valid frequency.");
+
       return;
     }
 
     if (notes.length > 1000) {
-      alert(
-        "Admin notes must be 1,000 characters or fewer."
-      );
+      alert("Admin notes must be 1,000 characters or fewer.");
+
       return;
     }
 
-    if (
-      pricingNotes.length > 1000
-    ) {
-      alert(
-        "Pricing notes must be 1,000 characters or fewer."
-      );
+    if (pricingNotes.length > 1000) {
+      alert("Pricing notes must be 1,000 characters or fewer.");
+
       return;
     }
 
-    if (
-      cleaningInstructions.length >
-      1000
-    ) {
-      alert(
-        "Cleaning instructions must be 1,000 characters or fewer."
-      );
+    if (cleaningInstructions.length > 1000) {
+      alert("Cleaning instructions must be 1,000 characters or fewer.");
+
       return;
     }
 
@@ -262,26 +208,25 @@ function EditClientForm({
     try {
       await updateClient({
         ...client,
+
         name,
         address,
         gateCode,
         notes,
         pricingNotes,
         cleaningInstructions,
+
+        pricePerCleaning: client.pricePerCleaning,
+
+        monthlyRate:
+          client.billingType === "Fixed Monthly" ? client.monthlyRate : 0,
       });
 
-      navigate(
-        `/clients/${client.firestoreId}`
-      );
+      navigate(`/clients/${client.firestoreId}`);
     } catch (error) {
-      console.error(
-        "Failed to update client:",
-        error
-      );
+      console.error("Failed to update client:", error);
 
-      setErrorMessage(
-        "The client could not be updated. Please try again."
-      );
+      setErrorMessage("The client could not be updated. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -295,8 +240,7 @@ function EditClientForm({
         </h1>
 
         <p className="mt-1 text-[var(--blue-dark)]">
-          Update this client's
-          information.
+          Update this client's information.
         </p>
       </div>
 
@@ -372,26 +316,65 @@ function EditClientForm({
 
         <div className="mb-4">
           <label className="mb-2 block font-medium text-[var(--charcoal)]">
-            Price Per Cleaning
+            Billing Type
           </label>
 
-          <input
-            type="number"
-            name="pricePerCleaning"
-            value={
-              client.pricePerCleaning
-            }
+          <select
+            name="billingType"
+            value={client.billingType}
             onChange={handleChange}
-            onWheel={(event) =>
-              event.currentTarget.blur()
-            }
-            required
-            min="0.01"
-            max="10000"
-            step="0.01"
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
-          />
+          >
+            <option value="Per Cleaning">Per Cleaning</option>
+
+            <option value="Fixed Monthly">Fixed Monthly</option>
+          </select>
+
+          <p className="mt-2 text-sm text-[var(--muted)]">
+            Fixed Monthly means this client pays the same amount each month even
+            when there is an extra cleaning week.
+          </p>
         </div>
+
+        {client.billingType === "Per Cleaning" ? (
+          <div className="mb-4">
+            <label className="mb-2 block font-medium text-[var(--charcoal)]">
+              Price Per Cleaning
+            </label>
+
+            <input
+              type="number"
+              name="pricePerCleaning"
+              value={client.pricePerCleaning}
+              onChange={handleChange}
+              onWheel={(event) => event.currentTarget.blur()}
+              required
+              min="0.01"
+              max="10000"
+              step="0.01"
+              className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            />
+          </div>
+        ) : (
+          <div className="mb-4">
+            <label className="mb-2 block font-medium text-[var(--charcoal)]">
+              Monthly Rate
+            </label>
+
+            <input
+              type="number"
+              name="monthlyRate"
+              value={client.monthlyRate}
+              onChange={handleChange}
+              onWheel={(event) => event.currentTarget.blur()}
+              required
+              min="0.01"
+              max="50000"
+              step="0.01"
+              className="w-full rounded-md border border-[var(--border-soft)] p-3"
+            />
+          </div>
+        )}
 
         <div className="mb-4">
           <label className="mb-2 block font-medium text-[var(--charcoal)]">
@@ -410,20 +393,15 @@ function EditClientForm({
 
         <div className="mb-4">
           <label className="mb-2 block font-medium text-[var(--charcoal)]">
-            Estimated Hours Per
-            Cleaning
+            Estimated Hours Per Cleaning
           </label>
 
           <input
             type="number"
             name="estimatedHours"
-            value={
-              client.estimatedHours
-            }
+            value={client.estimatedHours}
             onChange={handleChange}
-            onWheel={(event) =>
-              event.currentTarget.blur()
-            }
+            onWheel={(event) => event.currentTarget.blur()}
             required
             min="0.5"
             max="24"
@@ -443,21 +421,15 @@ function EditClientForm({
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
           >
-            <option>
-              Weekly
-            </option>
-            <option>
-              Twice Weekly
-            </option>
-            <option>
-              Twice Monthly
-            </option>
-            <option>
-              Monthly
-            </option>
-            <option>
-              As Needed
-            </option>
+            <option>Weekly</option>
+
+            <option>Twice Weekly</option>
+
+            <option>Twice Monthly</option>
+
+            <option>Monthly</option>
+
+            <option>As Needed</option>
           </select>
         </div>
 
@@ -467,8 +439,7 @@ function EditClientForm({
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Private. Helpers will not
-            see these notes.
+            Private. Helpers will not see these notes.
           </p>
 
           <textarea
@@ -488,17 +459,14 @@ function EditClientForm({
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Private. Use this for raises
-            and pricing history.
+            Private. Use this for raises and pricing history.
           </p>
 
           <textarea
             rows={3}
             name="pricingNotes"
             maxLength={1000}
-            value={
-              client.pricingNotes
-            }
+            value={client.pricingNotes}
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             placeholder="Raised from $35 to $40 — July 2026"
@@ -511,18 +479,14 @@ function EditClientForm({
           </label>
 
           <p className="mb-2 text-sm text-[var(--muted)]">
-            Helpers assigned to a
-            cleaning can see this
-            information.
+            Helpers assigned to a cleaning can see this information.
           </p>
 
           <textarea
             rows={4}
             name="cleaningInstructions"
             maxLength={1000}
-            value={
-              client.cleaningInstructions
-            }
+            value={client.cleaningInstructions}
             onChange={handleChange}
             className="w-full rounded-md border border-[var(--border-soft)] p-3"
             placeholder="Dogs, alarm instructions, rooms to skip, special cleaning requests..."
@@ -538,11 +502,7 @@ function EditClientForm({
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={() =>
-              navigate(
-                `/clients/${client.firestoreId}`
-              )
-            }
+            onClick={() => navigate(`/clients/${client.firestoreId}`)}
             disabled={saving}
             className="w-full rounded-md border border-[var(--border-soft)] px-4 py-3 font-medium text-[var(--charcoal)] disabled:cursor-not-allowed disabled:opacity-60"
           >
@@ -554,9 +514,7 @@ function EditClientForm({
             disabled={saving}
             className="w-full rounded-md bg-[var(--blue-dark)] px-4 py-3 font-medium text-white transition hover:bg-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {saving
-              ? "Saving..."
-              : "Save Changes"}
+            {saving ? "Saving..." : "Save Changes"}
           </button>
         </div>
       </form>
@@ -566,53 +524,37 @@ function EditClientForm({
 
 function EditClient() {
   const navigate = useNavigate();
-  const { clientId } =
-    useParams();
 
-  const clientContext =
-    useContext(ClientContext);
+  const { clientId } = useParams();
+
+  const clientContext = useContext(ClientContext);
 
   if (!clientContext) {
-    throw new Error(
-      "ClientContext not found"
-    );
+    throw new Error("ClientContext not found");
   }
 
-  const {
-    clients,
-    loadingClients,
-    updateClient,
-  } = clientContext;
+  const { clients, loadingClients, updateClient } = clientContext;
 
   if (loadingClients) {
     return (
       <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-6">
-        <p className="text-[var(--muted)]">
-          Loading client...
-        </p>
+        <p className="text-[var(--muted)]">Loading client...</p>
       </div>
     );
   }
 
-  const selectedClient =
-    clients.find(
-      (savedClient) =>
-        savedClient.firestoreId ===
-        clientId
-    );
+  const selectedClient = clients.find(
+    (savedClient) => savedClient.firestoreId === clientId,
+  );
 
   if (!selectedClient) {
     return (
       <div className="rounded-2xl border border-[var(--border-soft)] bg-[var(--card)] p-6">
-        <p className="text-[var(--muted-dark)]">
-          Client not found.
-        </p>
+        <p className="text-[var(--muted-dark)]">Client not found.</p>
 
         <button
           type="button"
-          onClick={() =>
-            navigate("/clients")
-          }
+          onClick={() => navigate("/clients")}
           className="mt-4 font-semibold text-[var(--blue-dark)] hover:underline"
         >
           Back to Clients
@@ -624,9 +566,7 @@ function EditClient() {
   return (
     <EditClientForm
       key={clientId}
-      initialClient={
-        selectedClient
-      }
+      initialClient={selectedClient}
       updateClient={updateClient}
     />
   );

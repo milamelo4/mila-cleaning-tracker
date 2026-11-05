@@ -1,12 +1,9 @@
-import {
-  useContext,
-  useState,
-  type FormEvent,
-} from "react";
+import { useContext, useState, type FormEvent } from "react";
 
 import { CleaningContext } from "../context/CleaningContext";
 import { ClientContext } from "../context/ClientContext";
 import { PaymentContext } from "../context/PaymentContext";
+
 import {
   calculateHourlyRate,
   calculateNetEarnings,
@@ -31,21 +28,27 @@ const formatCleaningDate = (date: string) => {
 
 function PaymentForm() {
   const cleaningContext = useContext(CleaningContext);
+
   const clientContext = useContext(ClientContext);
+
   const paymentContext = useContext(PaymentContext);
 
-  const [selectedCleaningId, setSelectedCleaningId] =
-    useState("");
+  const [selectedCleaningId, setSelectedCleaningId] = useState("");
 
   const [amountCharged, setAmountCharged] = useState(0);
+
   const [actualHours, setActualHours] = useState(0);
+
   const [helperPayout, setHelperPayout] = useState(0);
 
   const [paid, setPaid] = useState(false);
+
   const [paidDate, setPaidDate] = useState("");
+
   const [notes, setNotes] = useState("");
 
   const [saving, setSaving] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
 
   if (!cleaningContext) {
@@ -61,7 +64,9 @@ function PaymentForm() {
   }
 
   const { cleanings } = cleaningContext;
+
   const { clients } = clientContext;
+
   const { payments, addPayment } = paymentContext;
 
   const now = new Date();
@@ -72,92 +77,108 @@ function PaymentForm() {
     String(now.getDate()).padStart(2, "0"),
   ].join("-");
 
+  /*
+    This manual payment form is only
+    for Per Cleaning clients.
+
+    Fixed Monthly clients are handled
+    automatically by CleaningProvider.
+  */
   const availableCleanings = cleanings
-  .filter((cleaning) => {
-    if (
-      !cleaning.firestoreId ||
-      cleaning.status !== "Completed"
-    ) {
-      return false;
-    }
+    .filter((cleaning) => {
+      if (!cleaning.firestoreId || cleaning.status !== "Completed") {
+        return false;
+      }
+
+      const client = clients.find(
+        (savedClient) => savedClient.firestoreId === cleaning.clientId,
+      );
+
+      if (!client) {
+        return false;
+      }
+
+      if (client.billingType === "Fixed Monthly") {
+        return false;
+      }
 
       return !payments.some(
-        (payment) =>
-          payment.cleaningId === cleaning.firestoreId
+        (payment) => payment.cleaningId === cleaning.firestoreId,
       );
     })
     .sort((first, second) => {
-      const firstDateTime =
-        `${first.date}T${first.startTime}`;
+      const firstDateTime = `${first.date}T${first.startTime}`;
 
-      const secondDateTime =
-        `${second.date}T${second.startTime}`;
+      const secondDateTime = `${second.date}T${second.startTime}`;
 
       return secondDateTime.localeCompare(firstDateTime);
     });
 
   const selectedCleaning = cleanings.find(
-    (cleaning) =>
-      cleaning.firestoreId === selectedCleaningId
+    (cleaning) => cleaning.firestoreId === selectedCleaningId,
   );
 
   const selectedClient = selectedCleaning
-    ? clients.find(
-        (client) =>
-          client.firestoreId ===
-          selectedCleaning.clientId
-      )
+    ? clients.find((client) => client.firestoreId === selectedCleaning.clientId)
     : undefined;
 
-  const netEarnings = calculateNetEarnings(
-    amountCharged,
-    helperPayout
-  );
+  const netEarnings = calculateNetEarnings(amountCharged, helperPayout);
 
   const hourlyRate = calculateHourlyRate(
     amountCharged,
     helperPayout,
-    actualHours
+    actualHours,
   );
 
-  const handleCleaningChange = (
-    cleaningId: string
-  ) => {
+  const handleCleaningChange = (cleaningId: string) => {
     setSelectedCleaningId(cleaningId);
+
     setErrorMessage("");
 
     const cleaning = cleanings.find(
-      (savedCleaning) =>
-        savedCleaning.firestoreId === cleaningId
+      (savedCleaning) => savedCleaning.firestoreId === cleaningId,
     );
 
     if (!cleaning) {
       setAmountCharged(0);
       setActualHours(0);
       setHelperPayout(0);
+
       return;
     }
 
     const client = clients.find(
-      (savedClient) =>
-        savedClient.firestoreId === cleaning.clientId
+      (savedClient) => savedClient.firestoreId === cleaning.clientId,
     );
 
-    const defaultAmount =
-      client?.pricePerCleaning ?? 0;
+    /*
+      Defensive protection:
+      fixed-monthly clients should
+      never reach this form.
+    */
+    if (client?.billingType === "Fixed Monthly") {
+      setSelectedCleaningId("");
 
-    const hasHelper =
-      cleaning.assignedHelpers.length > 0;
+      setAmountCharged(0);
+      setActualHours(0);
+      setHelperPayout(0);
+
+      setErrorMessage(
+        "Fixed monthly clients are handled automatically and do not need a payment record for each cleaning.",
+      );
+
+      return;
+    }
+
+    const defaultAmount = client?.pricePerCleaning ?? 0;
+
+    const hasHelper = cleaning.assignedHelpers.length > 0;
 
     setAmountCharged(defaultAmount);
+
     setActualHours(cleaning.estimatedHours);
 
-    setHelperPayout(
-      getDefaultHelperPayout(
-        defaultAmount,
-        hasHelper
-      )
-    );
+    setHelperPayout(getDefaultHelperPayout(defaultAmount, hasHelper));
 
     setPaid(false);
     setPaidDate("");
@@ -166,46 +187,50 @@ function PaymentForm() {
 
   const resetForm = () => {
     setSelectedCleaningId("");
+
     setAmountCharged(0);
     setActualHours(0);
     setHelperPayout(0);
+
     setPaid(false);
     setPaidDate("");
     setNotes("");
+
     setErrorMessage("");
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     setErrorMessage("");
 
-    if (
-      !selectedCleaning ||
-      !selectedCleaning.firestoreId
-    ) {
+    if (!selectedCleaning || !selectedCleaning.firestoreId) {
       alert("Please select a valid cleaning.");
+
       return;
     }
 
     if (!selectedClient) {
+      alert("The client connected to this cleaning could not be found.");
+
+      return;
+    }
+
+    if (selectedClient.billingType === "Fixed Monthly") {
       alert(
-        "The client connected to this cleaning could not be found."
+        "Fixed monthly clients are handled automatically. Do not create a payment for each cleaning.",
       );
+
       return;
     }
 
     const duplicatePayment = payments.some(
-      (payment) =>
-        payment.cleaningId ===
-        selectedCleaning.firestoreId
+      (payment) => payment.cleaningId === selectedCleaning.firestoreId,
     );
 
     if (duplicatePayment) {
-      alert(
-        "This cleaning already has a payment record."
-      );
+      alert("This cleaning already has a payment record.");
+
       return;
     }
 
@@ -214,9 +239,8 @@ function PaymentForm() {
       amountCharged < 0.01 ||
       amountCharged > 10000
     ) {
-      alert(
-        "Amount charged must be between $0.01 and $10,000."
-      );
+      alert("Amount charged must be between $0.01 and $10,000.");
+
       return;
     }
 
@@ -225,9 +249,8 @@ function PaymentForm() {
       actualHours < 0.25 ||
       actualHours > 24
     ) {
-      alert(
-        "Actual hours must be between 0.25 and 24."
-      );
+      alert("Actual hours must be between 0.25 and 24.");
+
       return;
     }
 
@@ -237,27 +260,25 @@ function PaymentForm() {
       helperPayout > amountCharged
     ) {
       alert(
-        "Helper payout cannot be negative or greater than the amount charged."
+        "Helper payout cannot be negative or greater than the amount charged.",
       );
+
       return;
     }
 
     if (paid) {
-      const validPaidDate =
-        /^\d{4}-\d{2}-\d{2}$/.test(paidDate);
+      const validPaidDate = /^\d{4}-\d{2}-\d{2}$/.test(paidDate);
 
       if (!validPaidDate) {
-        alert(
-          "Please enter the date the client paid."
-        );
+        alert("Please enter the date the client paid.");
+
         return;
       }
     }
 
     if (notes.trim().length > 1000) {
-      alert(
-        "Notes must be 1,000 characters or fewer."
-      );
+      alert("Notes must be 1,000 characters or fewer.");
+
       return;
     }
 
@@ -266,27 +287,31 @@ function PaymentForm() {
     try {
       await addPayment({
         cleaningId: selectedCleaning.firestoreId,
+
         clientId: selectedCleaning.clientId,
+
         clientName: selectedClient.name,
+
         cleaningDate: selectedCleaning.date,
+
         amountCharged,
+
         actualHours,
+
         helperPayout,
+
         paid,
+
         paidDate: paid ? paidDate : "",
+
         notes: notes.trim(),
       });
 
       resetForm();
     } catch (error) {
-      console.error(
-        "Failed to save payment:",
-        error
-      );
+      console.error("Failed to save payment:", error);
 
-      setErrorMessage(
-        "The payment could not be saved. Please try again."
-      );
+      setErrorMessage("The payment could not be saved. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -302,7 +327,8 @@ function PaymentForm() {
       </h2>
 
       <p className="mt-1 text-sm text-[var(--muted)]">
-        Select a cleaning and confirm its financial details.
+        For per-cleaning clients only. Fixed monthly billing is handled
+        automatically.
       </p>
 
       <label
@@ -316,30 +342,20 @@ function PaymentForm() {
         id="paymentCleaning"
         value={selectedCleaningId}
         required
-        onChange={(event) =>
-          handleCleaningChange(event.target.value)
-        }
+        onChange={(event) => handleCleaningChange(event.target.value)}
         className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
       >
-        <option value="">
-          Select a cleaning
-        </option>
+        <option value="">Select a cleaning</option>
 
         {availableCleanings.map((cleaning) => {
           const client = clients.find(
-            (savedClient) =>
-              savedClient.firestoreId ===
-              cleaning.clientId
+            (savedClient) => savedClient.firestoreId === cleaning.clientId,
           );
 
           return (
-            <option
-              key={cleaning.firestoreId}
-              value={cleaning.firestoreId}
-            >
+            <option key={cleaning.firestoreId} value={cleaning.firestoreId}>
               {client?.name ?? "Client unavailable"} —{" "}
-              {formatCleaningDate(cleaning.date)} —{" "}
-              {cleaning.startTime}
+              {formatCleaningDate(cleaning.date)} — {cleaning.startTime}
             </option>
           );
         })}
@@ -347,8 +363,8 @@ function PaymentForm() {
 
       {availableCleanings.length === 0 && (
         <p className="mt-2 text-sm text-[var(--muted)]">
-          No cleaning is currently available for a new
-          payment record.
+          No per-cleaning cleaning is currently available for a new payment
+          record.
         </p>
       )}
 
@@ -371,13 +387,13 @@ function PaymentForm() {
             value={amountCharged}
             required
             onChange={(event) => {
-                const newAmount = Number(event.target.value);
+              const newAmount = Number(event.target.value);
 
-                setAmountCharged(newAmount);
+              setAmountCharged(newAmount);
 
-                if (selectedCleaning.assignedHelpers.length > 0) {
-                    setHelperPayout(newAmount / 2);
-                }
+              if (selectedCleaning.assignedHelpers.length > 0) {
+                setHelperPayout(newAmount / 2);
+              }
             }}
             className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
           />
@@ -398,17 +414,13 @@ function PaymentForm() {
             value={actualHours}
             required
             onWheel={(event) => event.currentTarget.blur()}
-            onChange={(event) =>
-              setActualHours(
-                Number(event.target.value)
-              )
-            }
+            onChange={(event) => setActualHours(Number(event.target.value))}
             className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
           />
 
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Enter the real time you were there. Do not
-            multiply it by the number of workers.
+            Enter the real time you were there. Do not multiply it by the number
+            of workers.
           </p>
 
           <label
@@ -427,18 +439,13 @@ function PaymentForm() {
             onWheel={(event) => event.currentTarget.blur()}
             value={helperPayout}
             required
-            onChange={(event) =>
-              setHelperPayout(
-                Number(event.target.value)
-              )
-            }
+            onChange={(event) => setHelperPayout(Number(event.target.value))}
             className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
           />
 
           {selectedCleaning.assignedHelpers.length > 0 && (
             <p className="mt-2 text-sm text-[var(--muted)]">
-              A 50/50 split was entered automatically.
-              You can change it.
+              A 50/50 split was entered automatically. You can change it.
             </p>
           )}
 
@@ -469,13 +476,11 @@ function PaymentForm() {
               type="checkbox"
               checked={paid}
               onChange={(event) => {
-                const checked =
-                  event.target.checked;
+                const checked = event.target.checked;
 
                 setPaid(checked);
-                setPaidDate(
-                  checked ? today : ""
-                );
+
+                setPaidDate(checked ? today : "");
               }}
             />
 
@@ -498,9 +503,7 @@ function PaymentForm() {
                 type="date"
                 value={paidDate}
                 required
-                onChange={(event) =>
-                  setPaidDate(event.target.value)
-                }
+                onChange={(event) => setPaidDate(event.target.value)}
                 className="block w-0 min-w-full max-w-full appearance-none rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
               />
             </>
@@ -518,32 +521,24 @@ function PaymentForm() {
             value={notes}
             rows={3}
             maxLength={1000}
-            onChange={(event) =>
-              setNotes(event.target.value)
-            }
+            onChange={(event) => setNotes(event.target.value)}
             className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
           />
         </>
       )}
 
       {errorMessage && (
-        <p className="mt-5 text-sm font-medium text-red-700">
-          {errorMessage}
-        </p>
+        <p className="mt-5 text-sm font-medium text-red-700">{errorMessage}</p>
       )}
 
       <button
         type="submit"
         disabled={
-          saving ||
-          !selectedCleaningId ||
-          availableCleanings.length === 0
+          saving || !selectedCleaningId || availableCleanings.length === 0
         }
         className="mt-6 w-full rounded-xl bg-[var(--blue-dark)] py-3 font-medium text-white transition hover:bg-[var(--blue)] disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {saving
-          ? "Saving..."
-          : "Save Payment Record"}
+        {saving ? "Saving..." : "Save Payment Record"}
       </button>
     </form>
   );

@@ -10,7 +10,7 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
+  onSnapshot,
   updateDoc,
 } from "firebase/firestore";
 
@@ -91,19 +91,9 @@ export function PaymentProvider({
       return;
     }
 
-    let cancelled = false;
-
-    const loadPayments = async () => {
-      try {
-        const snapshot =
-          await getDocs(
-            paymentsCollection
-          );
-
-        if (cancelled) {
-          return;
-        }
-
+    const unsubscribe = onSnapshot(
+      paymentsCollection,
+      (snapshot) => {
         const savedPayments =
           snapshot.docs.map(
             (paymentDocument) => {
@@ -125,13 +115,10 @@ export function PaymentProvider({
           scopeKey: activeScopeKey,
           payments: savedPayments,
         });
-      } catch (error) {
-        if (cancelled) {
-          return;
-        }
-
+      },
+      (error) => {
         console.error(
-          "Failed to load payments:",
+          "Failed to listen for payment updates:",
           error
         );
 
@@ -140,13 +127,9 @@ export function PaymentProvider({
           payments: [],
         });
       }
-    };
+    );
 
-    void loadPayments();
-
-    return () => {
-      cancelled = true;
-    };
+    return unsubscribe;
   }, [activeScopeKey]);
 
   const payments =
@@ -173,24 +156,9 @@ export function PaymentProvider({
     const paymentData =
       getPaymentData(payment);
 
-    const documentReference =
-      await addDoc(
-        paymentsCollection,
-        paymentData
-      );
-
-    setPaymentSnapshot(
-      (currentSnapshot) => ({
-        scopeKey: activeScopeKey,
-        payments: [
-          ...currentSnapshot.payments,
-          {
-            ...payment,
-            firestoreId:
-              documentReference.id,
-          },
-        ],
-      })
+    await addDoc(
+      paymentsCollection,
+      paymentData
     );
   };
 
@@ -216,10 +184,7 @@ export function PaymentProvider({
     }
 
     const paymentDocument = doc(
-      db,
-      "businesses",
-      "mila-cleaning-tracker",
-      "payments",
+      paymentsCollection,
       payment.firestoreId
     );
 
@@ -229,20 +194,6 @@ export function PaymentProvider({
     await updateDoc(
       paymentDocument,
       paymentData
-    );
-
-    setPaymentSnapshot(
-      (currentSnapshot) => ({
-        scopeKey: activeScopeKey,
-        payments:
-          currentSnapshot.payments.map(
-            (savedPayment) =>
-              savedPayment.firestoreId ===
-              payment.firestoreId
-                ? payment
-                : savedPayment
-          ),
-      })
     );
   };
 
@@ -262,26 +213,11 @@ export function PaymentProvider({
     }
 
     const paymentDocument = doc(
-      db,
-      "businesses",
-      "mila-cleaning-tracker",
-      "payments",
+      paymentsCollection,
       firestoreId
     );
 
     await deleteDoc(paymentDocument);
-
-    setPaymentSnapshot(
-      (currentSnapshot) => ({
-        scopeKey: activeScopeKey,
-        payments:
-          currentSnapshot.payments.filter(
-            (payment) =>
-              payment.firestoreId !==
-              firestoreId
-          ),
-      })
-    );
   };
 
   return (
