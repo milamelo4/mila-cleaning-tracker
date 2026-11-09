@@ -16,7 +16,12 @@ const emptyClient: ClientFormState = {
   gateCode: "",
 
   billingType: "Per Cleaning",
+
   pricePerCleaning: 0,
+
+  biweeklyRate: 0,
+  biweeklyAnchorDate: "",
+
   monthlyRate: 0,
 
   startDate: "",
@@ -69,6 +74,7 @@ function AddClient() {
 
     if (
       name === "pricePerCleaning" ||
+      name === "biweeklyRate" ||
       name === "monthlyRate" ||
       name === "estimatedHours"
     ) {
@@ -132,6 +138,7 @@ function AddClient() {
 
     if (
       client.billingType !== "Per Cleaning" &&
+      client.billingType !== "Biweekly" &&
       client.billingType !== "Fixed Monthly"
     ) {
       alert("Please select a valid billing type.");
@@ -139,13 +146,34 @@ function AddClient() {
       return;
     }
 
-    if (client.billingType === "Per Cleaning") {
+    if (
+      client.billingType === "Per Cleaning" ||
+      client.billingType === "Biweekly"
+    ) {
       if (
         !Number.isFinite(client.pricePerCleaning) ||
         client.pricePerCleaning < 0.01 ||
         client.pricePerCleaning > 10000
       ) {
         alert("Price per cleaning must be between $0.01 and $10,000.");
+
+        return;
+      }
+    }
+
+    if (client.billingType === "Biweekly") {
+      if (
+        !Number.isFinite(client.biweeklyRate) ||
+        client.biweeklyRate < 0.01 ||
+        client.biweeklyRate > 50000
+      ) {
+        alert("Biweekly rate must be between $0.01 and $50,000.");
+
+        return;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(client.biweeklyAnchorDate)) {
+        alert("Please enter a valid biweekly anchor date.");
 
         return;
       }
@@ -215,7 +243,16 @@ function AddClient() {
       pricingNotes,
       cleaningInstructions,
 
-      pricePerCleaning: client.pricePerCleaning,
+      pricePerCleaning:
+        client.billingType === "Per Cleaning" ||
+        client.billingType === "Biweekly"
+          ? client.pricePerCleaning
+          : 0,
+
+      biweeklyRate: client.billingType === "Biweekly" ? client.biweeklyRate : 0,
+
+      biweeklyAnchorDate:
+        client.billingType === "Biweekly" ? client.biweeklyAnchorDate : "",
 
       monthlyRate:
         client.billingType === "Fixed Monthly" ? client.monthlyRate : 0,
@@ -360,16 +397,14 @@ function AddClient() {
           >
             <option value="Per Cleaning">Per Cleaning</option>
 
+            <option value="Biweekly">Biweekly</option>
+
             <option value="Fixed Monthly">Fixed Monthly</option>
           </select>
-
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Fixed Monthly means the client pays the same amount each month, even
-            when the calendar has an extra cleaning week.
-          </p>
         </div>
 
-        {client.billingType === "Per Cleaning" ? (
+        {(client.billingType === "Per Cleaning" ||
+          client.billingType === "Biweekly") && (
           <div className="mb-4">
             <label
               htmlFor="pricePerCleaning"
@@ -385,7 +420,7 @@ function AddClient() {
               value={client.pricePerCleaning}
               onChange={handleChange}
               onWheel={(event) => event.currentTarget.blur()}
-              placeholder="150"
+              placeholder="125"
               required
               min="0.01"
               max="10000"
@@ -393,7 +428,61 @@ function AddClient() {
               className="w-full rounded-md border border-[var(--border-soft)] p-3"
             />
           </div>
-        ) : (
+        )}
+
+        {client.billingType === "Biweekly" && (
+          <>
+            <div className="mb-4">
+              <label
+                htmlFor="biweeklyRate"
+                className="mb-2 block font-medium text-[var(--charcoal)]"
+              >
+                Biweekly Rate
+              </label>
+
+              <input
+                type="number"
+                id="biweeklyRate"
+                name="biweeklyRate"
+                value={client.biweeklyRate}
+                onChange={handleChange}
+                onWheel={(event) => event.currentTarget.blur()}
+                placeholder="500"
+                required
+                min="0.01"
+                max="50000"
+                step="0.01"
+                className="w-full rounded-md border border-[var(--border-soft)] p-3"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label
+                htmlFor="biweeklyAnchorDate"
+                className="mb-2 block font-medium text-[var(--charcoal)]"
+              >
+                Pay Cycle Anchor Date
+              </label>
+
+              <input
+                type="date"
+                id="biweeklyAnchorDate"
+                name="biweeklyAnchorDate"
+                value={client.biweeklyAnchorDate}
+                onChange={handleChange}
+                required
+                className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] p-3"
+              />
+
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Enter one known invoice or pay-cycle date. The app will use it
+                to calculate the repeating 14-day cycle.
+              </p>
+            </div>
+          </>
+        )}
+
+        {client.billingType === "Fixed Monthly" && (
           <div className="mb-4">
             <label
               htmlFor="monthlyRate"

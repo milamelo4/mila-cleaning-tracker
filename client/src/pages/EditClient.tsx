@@ -3,17 +3,28 @@ import { useContext, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import { ClientContext } from "../context/ClientContext";
-
 import type { Client } from "../types/client";
 
 const normalizeClient = (client: Client): Client => ({
   ...client,
 
   billingType:
-    client.billingType === "Fixed Monthly" ? "Fixed Monthly" : "Per Cleaning",
+    client.billingType === "Biweekly"
+      ? "Biweekly"
+      : client.billingType === "Fixed Monthly"
+        ? "Fixed Monthly"
+        : "Per Cleaning",
 
   pricePerCleaning:
     typeof client.pricePerCleaning === "number" ? client.pricePerCleaning : 0,
+
+  biweeklyRate:
+    typeof client.biweeklyRate === "number" ? client.biweeklyRate : 0,
+
+  biweeklyAnchorDate:
+    typeof client.biweeklyAnchorDate === "string"
+      ? client.biweeklyAnchorDate
+      : "",
 
   monthlyRate: typeof client.monthlyRate === "number" ? client.monthlyRate : 0,
 
@@ -75,6 +86,7 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
 
     if (
       name === "pricePerCleaning" ||
+      name === "biweeklyRate" ||
       name === "monthlyRate" ||
       name === "estimatedHours"
     ) {
@@ -132,6 +144,7 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
 
     if (
       client.billingType !== "Per Cleaning" &&
+      client.billingType !== "Biweekly" &&
       client.billingType !== "Fixed Monthly"
     ) {
       alert("Please select a valid billing type.");
@@ -139,13 +152,34 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
       return;
     }
 
-    if (client.billingType === "Per Cleaning") {
+    if (
+      client.billingType === "Per Cleaning" ||
+      client.billingType === "Biweekly"
+    ) {
       if (
         !Number.isFinite(client.pricePerCleaning) ||
         client.pricePerCleaning < 0.01 ||
         client.pricePerCleaning > 10000
       ) {
         alert("Price per cleaning must be between $0.01 and $10,000.");
+
+        return;
+      }
+    }
+
+    if (client.billingType === "Biweekly") {
+      if (
+        !Number.isFinite(client.biweeklyRate) ||
+        client.biweeklyRate < 0.01 ||
+        client.biweeklyRate > 50000
+      ) {
+        alert("Biweekly rate must be between $0.01 and $50,000.");
+
+        return;
+      }
+
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(client.biweeklyAnchorDate)) {
+        alert("Please enter a valid pay cycle anchor date.");
 
         return;
       }
@@ -217,6 +251,12 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
         cleaningInstructions,
 
         pricePerCleaning: client.pricePerCleaning,
+
+        biweeklyRate:
+          client.billingType === "Biweekly" ? client.biweeklyRate : 0,
+
+        biweeklyAnchorDate:
+          client.billingType === "Biweekly" ? client.biweeklyAnchorDate : "",
 
         monthlyRate:
           client.billingType === "Fixed Monthly" ? client.monthlyRate : 0,
@@ -327,16 +367,14 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
           >
             <option value="Per Cleaning">Per Cleaning</option>
 
+            <option value="Biweekly">Biweekly</option>
+
             <option value="Fixed Monthly">Fixed Monthly</option>
           </select>
-
-          <p className="mt-2 text-sm text-[var(--muted)]">
-            Fixed Monthly means this client pays the same amount each month even
-            when there is an extra cleaning week.
-          </p>
         </div>
 
-        {client.billingType === "Per Cleaning" ? (
+        {(client.billingType === "Per Cleaning" ||
+          client.billingType === "Biweekly") && (
           <div className="mb-4">
             <label className="mb-2 block font-medium text-[var(--charcoal)]">
               Price Per Cleaning
@@ -355,7 +393,52 @@ function EditClientForm({ initialClient, updateClient }: EditClientFormProps) {
               className="w-full rounded-md border border-[var(--border-soft)] p-3"
             />
           </div>
-        ) : (
+        )}
+
+        {client.billingType === "Biweekly" && (
+          <>
+            <div className="mb-4">
+              <label className="mb-2 block font-medium text-[var(--charcoal)]">
+                Biweekly Rate
+              </label>
+
+              <input
+                type="number"
+                name="biweeklyRate"
+                value={client.biweeklyRate}
+                onChange={handleChange}
+                onWheel={(event) => event.currentTarget.blur()}
+                required
+                min="0.01"
+                max="50000"
+                step="0.01"
+                className="w-full rounded-md border border-[var(--border-soft)] p-3"
+              />
+            </div>
+
+            <div className="mb-4">
+              <label className="mb-2 block font-medium text-[var(--charcoal)]">
+                Pay Cycle Anchor Date
+              </label>
+
+              <input
+                type="date"
+                name="biweeklyAnchorDate"
+                value={client.biweeklyAnchorDate}
+                onChange={handleChange}
+                required
+                className="block w-0 min-w-full max-w-full appearance-none rounded-md border border-[var(--border-soft)] p-3"
+              />
+
+              <p className="mt-2 text-sm text-[var(--muted)]">
+                Enter one known invoice/pay-cycle date. The app will repeat the
+                cycle every 14 days.
+              </p>
+            </div>
+          </>
+        )}
+
+        {client.billingType === "Fixed Monthly" && (
           <div className="mb-4">
             <label className="mb-2 block font-medium text-[var(--charcoal)]">
               Monthly Rate

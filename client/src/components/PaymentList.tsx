@@ -1,6 +1,8 @@
 import { useContext, useState } from "react";
+
 import { PaymentContext } from "../context/PaymentContext";
 import type { Payment } from "../types/payment";
+
 import {
   calculateHourlyRate,
   calculateNetEarnings,
@@ -14,7 +16,26 @@ const formatCurrency = (amount: number) => {
 };
 
 const formatPaymentDate = (date: string) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    return "Date unavailable";
+  }
+
   return new Date(`${date}T00:00:00`).toLocaleDateString();
+};
+
+const formatPeriodDate = (date: string) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(`${date}T00:00:00`));
+};
+
+const formatPeriodEndDate = (date: string) => {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${date}T00:00:00`));
 };
 
 const formatMonthHeading = (year: string, month: string) => {
@@ -24,19 +45,52 @@ const formatMonthHeading = (year: string, month: string) => {
   }).format(new Date(`${year}-${month}-01T00:00:00`));
 };
 
+/*
+ * Per-cleaning and legacy monthly
+ * payments use cleaningDate.
+ *
+ * Biweekly payments use periodEnd
+ * as their accounting/history date.
+ */
+const getPaymentReferenceDate = (payment: Payment) => {
+  if (payment.billingType === "Biweekly" && payment.periodEnd) {
+    return payment.periodEnd;
+  }
+
+  return payment.cleaningDate;
+};
+
+const getPaymentDateLabel = (payment: Payment) => {
+  if (
+    payment.billingType === "Biweekly" &&
+    payment.periodStart &&
+    payment.periodEnd
+  ) {
+    return `${formatPeriodDate(payment.periodStart)} – ${formatPeriodEndDate(
+      payment.periodEnd,
+    )}`;
+  }
+
+  return formatPaymentDate(payment.cleaningDate);
+};
+
 function PaymentList() {
   const paymentContext = useContext(PaymentContext);
 
   const now = new Date();
+
   const currentYear = String(now.getFullYear());
+
   const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
 
-  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(
-    null
-  );
+  const [editingPaymentId, setEditingPaymentId] = useState<string | null>(null);
+
   const [editedPayment, setEditedPayment] = useState<Payment | null>(null);
+
   const [selectedYear, setSelectedYear] = useState(currentYear);
+
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+
   const [clientSearch, setClientSearch] = useState("");
 
   if (!paymentContext) {
@@ -48,52 +102,102 @@ function PaymentList() {
   const availableYears = Array.from(
     new Set([
       currentYear,
-      ...payments.map((payment) => payment.cleaningDate.slice(0, 4)),
-    ])
+
+      ...payments
+        .map((payment) => getPaymentReferenceDate(payment).slice(0, 4))
+        .filter((year) => /^\d{4}$/.test(year)),
+    ]),
   ).sort((a, b) => Number(b) - Number(a));
 
   const months = [
-    { value: "01", label: "January" },
-    { value: "02", label: "February" },
-    { value: "03", label: "March" },
-    { value: "04", label: "April" },
-    { value: "05", label: "May" },
-    { value: "06", label: "June" },
-    { value: "07", label: "July" },
-    { value: "08", label: "August" },
-    { value: "09", label: "September" },
-    { value: "10", label: "October" },
-    { value: "11", label: "November" },
-    { value: "12", label: "December" },
+    {
+      value: "01",
+      label: "January",
+    },
+    {
+      value: "02",
+      label: "February",
+    },
+    {
+      value: "03",
+      label: "March",
+    },
+    {
+      value: "04",
+      label: "April",
+    },
+    {
+      value: "05",
+      label: "May",
+    },
+    {
+      value: "06",
+      label: "June",
+    },
+    {
+      value: "07",
+      label: "July",
+    },
+    {
+      value: "08",
+      label: "August",
+    },
+    {
+      value: "09",
+      label: "September",
+    },
+    {
+      value: "10",
+      label: "October",
+    },
+    {
+      value: "11",
+      label: "November",
+    },
+    {
+      value: "12",
+      label: "December",
+    },
   ];
 
   const handleStartEditing = (payment: Payment) => {
     setEditingPaymentId(payment.firestoreId ?? null);
-    setEditedPayment({ ...payment });
+
+    setEditedPayment({
+      ...payment,
+    });
   };
 
   const handleSaveEditing = async () => {
-    if (!editedPayment) return;
+    if (!editedPayment) {
+      return;
+    }
 
     await updatePayment(editedPayment);
 
     setEditingPaymentId(null);
+
     setEditedPayment(null);
   };
 
   const handleCancelEditing = () => {
     setEditingPaymentId(null);
+
     setEditedPayment(null);
   };
 
   const handleDelete = async (firestoreId?: string) => {
-    if (!firestoreId) return;
+    if (!firestoreId) {
+      return;
+    }
 
     const confirmed = window.confirm(
-      "Are you sure you want to delete this payment?"
+      "Are you sure you want to delete this payment?",
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     await deletePayment(firestoreId);
   };
@@ -104,8 +208,11 @@ function PaymentList() {
     payment.clientName.toLowerCase().includes(searchTerm);
 
   const selectedMonthPayments = payments.filter((payment) => {
-    const paymentYear = payment.cleaningDate.slice(0, 4);
-    const paymentMonth = payment.cleaningDate.slice(5, 7);
+    const referenceDate = getPaymentReferenceDate(payment);
+
+    const paymentYear = referenceDate.slice(0, 4);
+
+    const paymentMonth = referenceDate.slice(5, 7);
 
     return (
       paymentYear === selectedYear &&
@@ -117,10 +224,12 @@ function PaymentList() {
   const monthTotals = selectedMonthPayments.reduce(
     (totals, payment) => {
       totals.charged += payment.amountCharged;
+
       totals.helper += payment.helperPayout;
+
       totals.net += calculateNetEarnings(
         payment.amountCharged,
-        payment.helperPayout
+        payment.helperPayout,
       );
 
       if (payment.paid) {
@@ -137,58 +246,59 @@ function PaymentList() {
       net: 0,
       paid: 0,
       unpaid: 0,
-    }
+    },
   );
 
   const outstandingPayments = payments
-    .filter(
-      (payment) => !payment.paid && matchesClientSearch(payment)
-    )
+    .filter((payment) => !payment.paid && matchesClientSearch(payment))
     .sort((a, b) =>
-      a.cleaningDate.localeCompare(b.cleaningDate)
+      getPaymentReferenceDate(a).localeCompare(getPaymentReferenceDate(b)),
     );
 
-  const paymentHistory = [...selectedMonthPayments]
-    .sort((a, b) => {
-      const dateComparison = b.cleaningDate.localeCompare(
-        a.cleaningDate
-      );
+  const paymentHistory = [...selectedMonthPayments].sort((a, b) => {
+    const dateComparison = getPaymentReferenceDate(b).localeCompare(
+      getPaymentReferenceDate(a),
+    );
 
-      if (dateComparison !== 0) {
-        return dateComparison;
-      }
+    if (dateComparison !== 0) {
+      return dateComparison;
+    }
 
-      return a.clientName.localeCompare(b.clientName);
-    });
+    return a.clientName.localeCompare(b.clientName);
+  });
 
   const outstandingTotal = outstandingPayments.reduce(
     (total, payment) => total + payment.amountCharged,
-    0
+    0,
   );
 
   const renderPaymentCard = (payment: Payment) => {
     const isEditing =
-      editingPaymentId === payment.firestoreId &&
-      editedPayment !== null;
+      editingPaymentId === payment.firestoreId && editedPayment !== null;
 
     const netEarnings = calculateNetEarnings(
       payment.amountCharged,
-      payment.helperPayout
+      payment.helperPayout,
     );
 
     const hourlyRate = calculateHourlyRate(
       payment.amountCharged,
       payment.helperPayout,
-      payment.actualHours
+      payment.actualHours,
     );
 
-    const inputKey = payment.firestoreId ?? payment.cleaningId;
+    const inputKey =
+      payment.firestoreId ??
+      payment.cleaningId ??
+      getPaymentReferenceDate(payment);
+
+    const isBiweekly = payment.billingType === "Biweekly";
 
     return (
       <div
         key={
           payment.firestoreId ??
-          `${payment.cleaningId}-${payment.cleaningDate}`
+          `${payment.clientId}-${getPaymentReferenceDate(payment)}`
         }
         className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
       >
@@ -198,9 +308,25 @@ function PaymentList() {
               {payment.clientName}
             </h4>
 
+            {isBiweekly && (
+              <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--blue-dark)]">
+                Biweekly
+              </p>
+            )}
+
             <p className="mt-1 text-sm text-[var(--muted)]">
-              {formatPaymentDate(payment.cleaningDate)}
+              {getPaymentDateLabel(payment)}
             </p>
+
+            {isBiweekly && payment.includedCleaningIds && (
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                {payment.includedCleaningIds.length}{" "}
+                {payment.includedCleaningIds.length === 1
+                  ? "cleaning"
+                  : "cleanings"}{" "}
+                included
+              </p>
+            )}
           </div>
 
           <span
@@ -227,13 +353,14 @@ function PaymentList() {
               id={`payment-amount-${inputKey}`}
               type="number"
               min="0.01"
-              max="10000"
+              max="50000"
               step="0.01"
               onWheel={(event) => event.currentTarget.blur()}
               value={editedPayment.amountCharged}
               onChange={(event) =>
                 setEditedPayment({
                   ...editedPayment,
+
                   amountCharged: Number(event.target.value),
                 })
               }
@@ -244,20 +371,23 @@ function PaymentList() {
               htmlFor={`payment-hours-${inputKey}`}
               className="mt-4 block text-sm font-medium text-[var(--charcoal)]"
             >
-              Actual hours
+              {editedPayment.billingType === "Biweekly"
+                ? "Total hours in period"
+                : "Actual hours"}
             </label>
 
             <input
               id={`payment-hours-${inputKey}`}
               type="number"
               min="0.25"
-              max="24"
+              max="744"
               step="0.25"
               onWheel={(event) => event.currentTarget.blur()}
               value={editedPayment.actualHours}
               onChange={(event) =>
                 setEditedPayment({
                   ...editedPayment,
+
                   actualHours: Number(event.target.value),
                 })
               }
@@ -282,6 +412,7 @@ function PaymentList() {
               onChange={(event) =>
                 setEditedPayment({
                   ...editedPayment,
+
                   helperPayout: Number(event.target.value),
                 })
               }
@@ -295,7 +426,9 @@ function PaymentList() {
                 onChange={(event) =>
                   setEditedPayment({
                     ...editedPayment,
+
                     paid: event.target.checked,
+
                     paidDate: event.target.checked
                       ? editedPayment.paidDate ||
                         new Date().toISOString().split("T")[0]
@@ -303,7 +436,6 @@ function PaymentList() {
                   })
                 }
               />
-
               Paid
             </label>
 
@@ -323,6 +455,7 @@ function PaymentList() {
                   onChange={(event) =>
                     setEditedPayment({
                       ...editedPayment,
+
                       paidDate: event.target.value,
                     })
                   }
@@ -344,6 +477,7 @@ function PaymentList() {
               onChange={(event) =>
                 setEditedPayment({
                   ...editedPayment,
+
                   notes: event.target.value,
                 })
               }
@@ -375,6 +509,7 @@ function PaymentList() {
         <div className="mt-4 grid grid-cols-2 gap-4 text-sm sm:grid-cols-4">
           <div>
             <p className="text-[var(--muted)]">Charged</p>
+
             <p className="font-semibold">
               {formatCurrency(payment.amountCharged)}
             </p>
@@ -382,6 +517,7 @@ function PaymentList() {
 
           <div>
             <p className="text-[var(--muted)]">Helper</p>
+
             <p className="font-semibold">
               {formatCurrency(payment.helperPayout)}
             </p>
@@ -389,15 +525,18 @@ function PaymentList() {
 
           <div>
             <p className="text-[var(--muted)]">Net earnings</p>
-            <p className="font-semibold">
-              {formatCurrency(netEarnings)}
-            </p>
+
+            <p className="font-semibold">{formatCurrency(netEarnings)}</p>
           </div>
 
           <div>
-            <p className="text-[var(--muted)]">Hourly rate</p>
+            <p className="text-[var(--muted)]">
+              {isBiweekly ? "Effective hourly rate" : "Hourly rate"}
+            </p>
+
             <p className="font-semibold">
-              {formatCurrency(hourlyRate)}/hr
+              {formatCurrency(hourlyRate)}
+              /hr
             </p>
           </div>
         </div>
@@ -449,9 +588,7 @@ function PaymentList() {
               <select
                 id="paymentYear"
                 value={selectedYear}
-                onChange={(event) =>
-                  setSelectedYear(event.target.value)
-                }
+                onChange={(event) => setSelectedYear(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
               >
                 {availableYears.map((year) => (
@@ -473,9 +610,7 @@ function PaymentList() {
               <select
                 id="paymentMonth"
                 value={selectedMonth}
-                onChange={(event) =>
-                  setSelectedMonth(event.target.value)
-                }
+                onChange={(event) => setSelectedMonth(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
               >
                 {months.map((month) => (
@@ -499,9 +634,7 @@ function PaymentList() {
                 type="search"
                 value={clientSearch}
                 placeholder="Enter client name"
-                onChange={(event) =>
-                  setClientSearch(event.target.value)
-                }
+                onChange={(event) => setClientSearch(event.target.value)}
                 className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3"
               />
             </div>
@@ -518,35 +651,30 @@ function PaymentList() {
 
             <p className="text-sm text-[var(--muted)]">
               {selectedMonthPayments.length}{" "}
-              {selectedMonthPayments.length === 1
-                ? "payment"
-                : "payments"}
+              {selectedMonthPayments.length === 1 ? "payment" : "payments"}
             </p>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             <div className="rounded-xl bg-white p-3">
-              <p className="text-xs text-[var(--muted)]">
-                Total charged
-              </p>
+              <p className="text-xs text-[var(--muted)]">Total charged</p>
+
               <p className="mt-1 font-bold text-[var(--charcoal)]">
                 {formatCurrency(monthTotals.charged)}
               </p>
             </div>
 
             <div className="rounded-xl bg-white p-3">
-              <p className="text-xs text-[var(--muted)]">
-                Helper payouts
-              </p>
+              <p className="text-xs text-[var(--muted)]">Helper payouts</p>
+
               <p className="mt-1 font-bold text-[var(--charcoal)]">
                 {formatCurrency(monthTotals.helper)}
               </p>
             </div>
 
             <div className="rounded-xl bg-white p-3">
-              <p className="text-xs text-[var(--muted)]">
-                Net earnings
-              </p>
+              <p className="text-xs text-[var(--muted)]">Net earnings</p>
+
               <p className="mt-1 font-bold text-[var(--charcoal)]">
                 {formatCurrency(monthTotals.net)}
               </p>
@@ -554,6 +682,7 @@ function PaymentList() {
 
             <div className="rounded-xl bg-white p-3">
               <p className="text-xs text-[var(--muted)]">Paid</p>
+
               <p className="mt-1 font-bold text-green-700">
                 {formatCurrency(monthTotals.paid)}
               </p>
@@ -561,6 +690,7 @@ function PaymentList() {
 
             <div className="rounded-xl bg-white p-3">
               <p className="text-xs text-[var(--muted)]">Unpaid</p>
+
               <p className="mt-1 font-bold text-amber-700">
                 {formatCurrency(monthTotals.unpaid)}
               </p>
@@ -586,6 +716,7 @@ function PaymentList() {
               <p className="text-xs font-semibold uppercase tracking-wide text-[var(--muted)]">
                 Total owed
               </p>
+
               <p className="text-lg font-bold text-amber-700">
                 {formatCurrency(outstandingTotal)}
               </p>
@@ -601,9 +732,7 @@ function PaymentList() {
           </div>
         ) : (
           <div className="space-y-4">
-            {outstandingPayments.map((payment) =>
-              renderPaymentCard(payment)
-            )}
+            {outstandingPayments.map((payment) => renderPaymentCard(payment))}
           </div>
         )}
       </section>
@@ -616,7 +745,8 @@ function PaymentList() {
             </h3>
 
             <p className="mt-1 text-sm text-[var(--muted)]">
-              Payments from {formatMonthHeading(selectedYear, selectedMonth)}, newest first.
+              Payments from {formatMonthHeading(selectedYear, selectedMonth)},
+              newest first.
             </p>
           </div>
 
@@ -634,9 +764,7 @@ function PaymentList() {
           </div>
         ) : (
           <div className="space-y-4">
-            {paymentHistory.map((payment) =>
-              renderPaymentCard(payment)
-            )}
+            {paymentHistory.map((payment) => renderPaymentCard(payment))}
           </div>
         )}
       </section>

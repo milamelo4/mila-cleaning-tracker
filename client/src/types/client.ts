@@ -1,5 +1,6 @@
 export type BillingType =
   | "Per Cleaning"
+  | "Biweekly"
   | "Fixed Monthly";
 
 export interface Client {
@@ -13,11 +14,21 @@ export interface Client {
 
   billingType: BillingType;
 
-  // Used when billingType is "Per Cleaning".
+  // Reference price for one cleaning.
+  // Also useful for helper payout calculations.
   pricePerCleaning: number;
 
-  // Used when billingType is "Fixed Monthly".
-  // Keep as 0 for per-cleaning clients.
+  // Amount the client pays every 14 days.
+  // Keep as 0 when billingType is not "Biweekly".
+  biweeklyRate: number;
+
+  // One known invoice/pay-cycle date.
+  // Example for Made by Mary: "2026-10-05".
+  // Used to calculate all 14-day billing periods.
+  biweeklyAnchorDate: string;
+
+  // Used only when billingType is "Fixed Monthly".
+  // Keep as 0 for other billing types.
   monthlyRate: number;
 
   startDate: string;
@@ -43,7 +54,13 @@ export interface Client {
 export interface ClientFinancial {
   clientId: string;
   billingType: BillingType;
+
   pricePerCleaning: number;
+
+  biweeklyRate: number;
+  biweeklyAnchorDate: string;
+
   monthlyRate: number;
+
   startDate: string;
 }

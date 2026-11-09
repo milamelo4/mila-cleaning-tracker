@@ -78,12 +78,13 @@ function PaymentForm() {
   ].join("-");
 
   /*
-    This manual payment form is only
-    for Per Cleaning clients.
-
-    Fixed Monthly clients are handled
-    automatically by CleaningProvider.
-  */
+   * Manual payment records are only
+   * for Per Cleaning clients.
+   *
+   * Biweekly and Fixed Monthly
+   * payments are handled automatically
+   * by CleaningProvider.
+   */
   const availableCleanings = cleanings
     .filter((cleaning) => {
       if (!cleaning.firestoreId || cleaning.status !== "Completed") {
@@ -98,7 +99,7 @@ function PaymentForm() {
         return false;
       }
 
-      if (client.billingType === "Fixed Monthly") {
+      if (client.billingType !== "Per Cleaning") {
         return false;
       }
 
@@ -152,11 +153,11 @@ function PaymentForm() {
     );
 
     /*
-      Defensive protection:
-      fixed-monthly clients should
-      never reach this form.
-    */
-    if (client?.billingType === "Fixed Monthly") {
+     * Defensive protection:
+     * only Per Cleaning clients
+     * can use this form.
+     */
+    if (client?.billingType !== "Per Cleaning") {
       setSelectedCleaningId("");
 
       setAmountCharged(0);
@@ -164,13 +165,13 @@ function PaymentForm() {
       setHelperPayout(0);
 
       setErrorMessage(
-        "Fixed monthly clients are handled automatically and do not need a payment record for each cleaning.",
+        "This client uses automatic billing and does not need a payment record for each cleaning.",
       );
 
       return;
     }
 
-    const defaultAmount = client?.pricePerCleaning ?? 0;
+    const defaultAmount = client.pricePerCleaning;
 
     const hasHelper = cleaning.assignedHelpers.length > 0;
 
@@ -216,9 +217,9 @@ function PaymentForm() {
       return;
     }
 
-    if (selectedClient.billingType === "Fixed Monthly") {
+    if (selectedClient.billingType !== "Per Cleaning") {
       alert(
-        "Fixed monthly clients are handled automatically. Do not create a payment for each cleaning.",
+        "This client uses automatic billing. Do not create a payment for each cleaning.",
       );
 
       return;
@@ -286,6 +287,8 @@ function PaymentForm() {
 
     try {
       await addPayment({
+        billingType: "Per Cleaning",
+
         cleaningId: selectedCleaning.firestoreId,
 
         clientId: selectedCleaning.clientId,
@@ -327,8 +330,8 @@ function PaymentForm() {
       </h2>
 
       <p className="mt-1 text-sm text-[var(--muted)]">
-        For per-cleaning clients only. Fixed monthly billing is handled
-        automatically.
+        For per-cleaning clients only. Biweekly and fixed monthly billing are
+        handled automatically.
       </p>
 
       <label
