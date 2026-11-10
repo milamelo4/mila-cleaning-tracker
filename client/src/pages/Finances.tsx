@@ -14,6 +14,7 @@ import {
 import { CleaningContext } from "../context/CleaningContext";
 import { ClientContext } from "../context/ClientContext";
 import { PaymentContext } from "../context/PaymentContext";
+import type { Payment } from "../types/payment";
 import { calculateNetEarnings } from "../utils/paymentCalculations";
 
 type Period =
@@ -52,6 +53,37 @@ const getLocalDateKey = (date: Date) =>
     String(date.getMonth() + 1).padStart(2, "0"),
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
+
+const getPaymentReferenceDate = (payment: Payment) => {
+  if (
+    payment.billingType === "Biweekly" &&
+    payment.periodEnd
+  ) {
+    return payment.periodEnd;
+  }
+
+  return payment.cleaningDate;
+};
+
+const getPaymentDateLabel = (payment: Payment) => {
+  if (
+    payment.billingType === "Biweekly" &&
+    payment.periodStart &&
+    payment.periodEnd
+  ) {
+    return `Biweekly period ${formatDate(
+      payment.periodStart
+    )} – ${formatDate(payment.periodEnd)}`;
+  }
+
+  if (payment.cleaningDate) {
+    return `Cleaning on ${formatDate(
+      payment.cleaningDate
+    )}`;
+  }
+
+  return "Payment date unavailable";
+};
 
 function MetricCard({
   label,
@@ -160,7 +192,9 @@ function Finances() {
 
   const filteredPayments = payments.filter(
     (payment) =>
-      matchesPeriod(payment.cleaningDate) &&
+      matchesPeriod(
+        getPaymentReferenceDate(payment)
+      ) &&
       matchesClient(payment.clientId)
   );
 
@@ -187,7 +221,9 @@ function Finances() {
   const unpaidPayments = filteredPayments
     .filter((payment) => !payment.paid)
     .sort((first, second) =>
-      first.cleaningDate.localeCompare(second.cleaningDate)
+      getPaymentReferenceDate(first).localeCompare(
+        getPaymentReferenceDate(second)
+      )
     );
 
   const unpaidBalance = unpaidPayments.reduce(
@@ -675,7 +711,7 @@ function Finances() {
                 <div
                   key={
                     payment.firestoreId ??
-                    `${payment.clientId}-${payment.cleaningDate}-${index}`
+                    `${payment.clientId}-${getPaymentReferenceDate(payment)}-${index}`
                   }
                   className={`flex items-center justify-between gap-4 p-4 ${
                     index !==
@@ -690,10 +726,7 @@ function Finances() {
                     </p>
 
                     <p className="mt-1 text-sm text-[var(--muted)]">
-                      Cleaning on{" "}
-                      {formatDate(
-                        payment.cleaningDate
-                      )}
+                      {getPaymentDateLabel(payment)}
                     </p>
                   </div>
 
