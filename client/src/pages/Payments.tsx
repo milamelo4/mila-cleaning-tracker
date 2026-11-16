@@ -1,4 +1,3 @@
-import PaymentForm from "../components/PaymentForm";
 import PaymentList from "../components/PaymentList";
 
 function Payments() {
@@ -14,7 +13,6 @@ function Payments() {
         </p>
       </div>
 
-      <PaymentForm />
       <PaymentList />
     </div>
   );
