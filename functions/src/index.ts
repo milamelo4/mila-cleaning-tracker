@@ -5,48 +5,30 @@ import {initializeApp} from "firebase-admin/app";
 import {getFirestore} from "firebase-admin/firestore";
 import OpenAI from "openai";
 
+import type {
+  ClientSummary,
+  CleaningSummary,
+  HistoryMessage,
+  PaymentSummary,
+} from "./types";
+import {
+  addDays,
+  addMonths,
+  daysBetween,
+  getMonday,
+  getMonthEnd,
+  getMonthStart,
+  getUtahDateKey,
+} from "./dateUtils";
+
+import {getPaymentReferenceDate} from "./paymentUtils";
+
 initializeApp();
 
 setGlobalOptions({maxInstances: 1});
 
 const db = getFirestore();
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
-
-type HistoryMessage = {
-  role?: unknown;
-  content?: unknown;
-};
-
-type CleaningSummary = {
-  id: string;
-  clientId: string;
-  clientName: string;
-  date: string;
-  startTime: string;
-  estimatedHours: number;
-  status: string;
-};
-
-type PaymentSummary = {
-  id: string;
-  clientId: string;
-  clientName: string;
-  cleaningDate: string;
-  amountCharged: number;
-  actualHours: number;
-  helperPayout: number;
-  paid: boolean;
-  paidDate: string;
-};
-
-type ClientSummary = {
-  id: string;
-  name: string;
-  pricePerCleaning: number;
-  frequency: string;
-  helperNeeded: boolean;
-  active: boolean;
-};
 
 /**
  * Verifies that the current user is an admin.
@@ -77,139 +59,6 @@ async function requireAdmin(uid?: string) {
   }
 }
 
-/**
- * Returns today's date in Utah as YYYY-MM-DD.
- * @return {string} Utah date key.
- */
-function getUtahDateKey() {
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: "America/Denver",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-
-  const year = parts.find(
-    (part) => part.type === "year"
-  )?.value;
-
-  const month = parts.find(
-    (part) => part.type === "month"
-  )?.value;
-
-  const day = parts.find(
-    (part) => part.type === "day"
-  )?.value;
-
-  return `${year}-${month}-${day}`;
-}
-
-/**
- * Adds days to a YYYY-MM-DD date.
- * @param {string} dateKey Date key.
- * @param {number} numberOfDays Number of days to add.
- * @return {string} Updated date key.
- */
-function addDays(
-  dateKey: string,
-  numberOfDays: number
-) {
-  const [year, month, day] =
-    dateKey.split("-").map(Number);
-
-  const date = new Date(
-    Date.UTC(year, month - 1, day)
-  );
-
-  date.setUTCDate(
-    date.getUTCDate() + numberOfDays
-  );
-
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Returns the Monday for the week containing dateKey.
- * @param {string} dateKey Date key.
- * @return {string} Monday date key.
- */
-function getMonday(dateKey: string) {
-  const [year, month, day] =
-    dateKey.split("-").map(Number);
-
-  const date = new Date(
-    Date.UTC(year, month - 1, day)
-  );
-
-  const weekday = date.getUTCDay();
-  const daysFromMonday =
-    weekday === 0 ? -6 : 1 - weekday;
-
-  return addDays(dateKey, daysFromMonday);
-}
-
-/**
- * Returns the first day of a month.
- * @param {string} dateKey Date key.
- * @return {string} Month start date key.
- */
-function getMonthStart(dateKey: string) {
-  return `${dateKey.slice(0, 7)}-01`;
-}
-
-/**
- * Returns the final day of a month.
- * @param {string} dateKey Date key.
- * @return {string} Month end date key.
- */
-function getMonthEnd(dateKey: string) {
-  const [year, month] =
-    dateKey.split("-").map(Number);
-
-  const date = new Date(
-    Date.UTC(year, month, 0)
-  );
-
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Returns the first day of a month offset from dateKey.
- * @param {string} dateKey Date key.
- * @param {number} amount Number of months to move.
- * @return {string} Month start date key.
- */
-function addMonths(
-  dateKey: string,
-  amount: number
-) {
-  const [year, month] =
-    dateKey.split("-").map(Number);
-
-  const date = new Date(
-    Date.UTC(year, month - 1 + amount, 1)
-  );
-
-  return date.toISOString().slice(0, 10);
-}
-
-/**
- * Calculates whole calendar days between two date keys.
- * @param {string} startDate Start date.
- * @param {string} endDate End date.
- * @return {number} Number of days.
- */
-function daysBetween(
-  startDate: string,
-  endDate: string
-) {
-  const start = Date.parse(`${startDate}T00:00:00Z`);
-  const end = Date.parse(`${endDate}T00:00:00Z`);
-
-  return Math.floor(
-    (end - start) / 86400000
-  );
-}
 
 /**
  * Returns schedule totals for a date range.
@@ -507,11 +356,25 @@ export const askMilaAssistant = onCall(
             "string" ?
               data.clientName :
               "",
+          billingType:
+  data.billingType === "Biweekly" ||
+  data.billingType === "Fixed Monthly" ||
+  data.billingType === "Per Cleaning" ?
+    data.billingType :
+    undefined,
           cleaningDate:
-            typeof data.cleaningDate ===
-            "string" ?
-              data.cleaningDate :
-              "",
+  typeof data.cleaningDate ===
+  "string" ?
+    data.cleaningDate :
+    "",
+          periodStart:
+  typeof data.periodStart === "string" ?
+    data.periodStart :
+    undefined,
+          periodEnd:
+  typeof data.periodEnd === "string" ?
+    data.periodEnd :
+    undefined,
           amountCharged:
             typeof data.amountCharged ===
             "number" ?
@@ -684,11 +547,6 @@ export const askMilaAssistant = onCall(
     const billedRevenueByClient:
       Record<string, number> = {};
 
-    const billedRevenueByClientThisYear:
-      Record<string, number> = {};
-
-    const billedRevenueByClientThisMonth:
-      Record<string, number> = {};
     const helperPayoutsByClient:
       Record<string, number> = {};
 
@@ -699,9 +557,6 @@ export const askMilaAssistant = onCall(
     let totalBilledRevenue = 0;
     let totalCashReceived = 0;
     let totalHelperPayouts = 0;
-
-    const currentYear = todayDate.slice(0, 4);
-    const currentMonth = todayDate.slice(0, 7);
 
     for (const payment of payments) {
       const amountCharged =
@@ -728,36 +583,6 @@ export const askMilaAssistant = onCall(
           ] ?? 0
         ) + amountCharged;
 
-      if (
-        payment.cleaningDate.startsWith(
-          currentYear
-        )
-      ) {
-        billedRevenueByClientThisYear[
-          clientName
-        ] =
-    (
-      billedRevenueByClientThisYear[
-        clientName
-      ] ?? 0
-    ) + amountCharged;
-      }
-
-      if (
-        payment.cleaningDate.startsWith(
-          currentMonth
-        )
-      ) {
-        billedRevenueByClientThisMonth[
-          clientName
-        ] =
-    (
-      billedRevenueByClientThisMonth[
-        clientName
-      ] ?? 0
-    ) + amountCharged;
-      }
-
       helperPayoutsByClient[clientName] =
         (
           helperPayoutsByClient[
@@ -765,25 +590,28 @@ export const askMilaAssistant = onCall(
           ] ?? 0
         ) + helperPayout;
 
+      const paymentReferenceDate =
+  getPaymentReferenceDate(payment);
+
       if (
-        payment.cleaningDate.length >= 7
+        paymentReferenceDate.length >= 7
       ) {
         const month =
-          payment.cleaningDate.slice(0, 7);
+    paymentReferenceDate.slice(0, 7);
 
         billedRevenueByMonth[month] =
-          (
-            billedRevenueByMonth[
-              month
-            ] ?? 0
-          ) + amountCharged;
+    (
+      billedRevenueByMonth[
+        month
+      ] ?? 0
+    ) + amountCharged;
 
         helperPayoutsByMonth[month] =
-          (
-            helperPayoutsByMonth[
-              month
-            ] ?? 0
-          ) + helperPayout;
+    (
+      helperPayoutsByMonth[
+        month
+      ] ?? 0
+    ) + helperPayout;
       }
 
       if (
@@ -1081,43 +909,19 @@ export const askMilaAssistant = onCall(
         }));
 
     const clientsByRevenue =
-  [...clientInsights]
-    .sort(
-      (a, b) =>
-        b.billedRevenue -
-        a.billedRevenue
-    )
-    .map((client) => ({
-      name: client.name,
-      billedRevenue:
-        client.billedRevenue,
-      netAfterHelper:
-        client.netAfterHelper,
-    }));
-
-    const clientsByRevenueThisYear =
-  Object.entries(
-    billedRevenueByClientThisYear
-  )
-    .sort(([, first], [, second]) =>
-      second - first
-    )
-    .map(([name, billedRevenue]) => ({
-      name,
-      billedRevenue,
-    }));
-
-    const clientsByRevenueThisMonth =
-  Object.entries(
-    billedRevenueByClientThisMonth
-  )
-    .sort(([, first], [, second]) =>
-      second - first
-    )
-    .map(([name, billedRevenue]) => ({
-      name,
-      billedRevenue,
-    }));
+      [...clientInsights]
+        .sort(
+          (a, b) =>
+            b.billedRevenue -
+            a.billedRevenue
+        )
+        .map((client) => ({
+          name: client.name,
+          billedRevenue:
+            client.billedRevenue,
+          netAfterHelper:
+            client.netAfterHelper,
+        }));
 
     const clientsWithUnpaidBalance =
       clientInsights
@@ -1158,8 +962,6 @@ export const askMilaAssistant = onCall(
         unpaidBalance,
         unpaidByClient,
         billedRevenueByClient,
-        billedRevenueByClientThisYear,
-        billedRevenueByClientThisMonth,
         helperPayoutsByClient,
         netAfterHelperByClient,
         totalBilledRevenue,
@@ -1172,8 +974,6 @@ export const askMilaAssistant = onCall(
       clientInsights,
       clientsByOldestLastCleaning,
       clientsByRevenue,
-      clientsByRevenueThisYear,
-      clientsByRevenueThisMonth,
       clientsWithUnpaidBalance,
       clientsRequiringHelpers,
       pastScheduledCleanings,
@@ -1198,7 +998,10 @@ answer the question. Do not recalculate exact totals if a metric already
 exists.
 
 Financial definitions:
-- Billed revenue = total amount charged, grouped by cleaning date.
+- Billed revenue = total amount charged, grouped by payment reference date.
+- For Biweekly payments, the payment reference date is periodEnd.
+- For Per Cleaning and legacy payments, the payment reference date is 
+cleaningDate.
 - Cash received = paid payments, grouped by paid date.
 - Unpaid balance = total amount still unpaid.
 - Net after helper = billed revenue minus helper payouts.
@@ -1225,10 +1028,6 @@ Client insight definitions:
 - clients by revenue ranks clients from highest billed revenue to lowest.
 - clients with unpaid balance is already sorted from highest to lowest.
 - active clients without history have no Completed cleaning in the data.
-- clients by revenue = all-time billed revenue by client.
-- clients by revenue this year = billed revenue by client for the current year.
-- clients by revenue this month = billed revenue by client for the
-  current month.
 
 Use the safe business data provided to answer questions about clients,
 cleanings, schedules, and payments.
