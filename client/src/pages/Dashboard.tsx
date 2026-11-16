@@ -14,8 +14,6 @@ import { CleaningContext } from "../context/CleaningContext";
 import { ClientContext } from "../context/ClientContext";
 import { PaymentContext } from "../context/PaymentContext";
 
-
-
 type MetricCardProps = {
   label: string;
   value: string;
@@ -43,12 +41,106 @@ const getLocalDateKey = (date: Date) =>
     String(date.getDate()).padStart(2, "0"),
   ].join("-");
 
-function MetricCard({
-  label,
-  value,
-  note,
-  icon: Icon,
-}: MetricCardProps) {
+const escapeCalendarText = (value: string) =>
+  value
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/,/g, "\\,")
+    .replace(/;/g, "\\;");
+
+const formatCalendarDateTime = (date: Date) =>
+  [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, "0"),
+    String(date.getDate()).padStart(2, "0"),
+  ].join("") +
+  "T" +
+  [
+    String(date.getHours()).padStart(2, "0"),
+    String(date.getMinutes()).padStart(2, "0"),
+    "00",
+  ].join("");
+
+const formatCalendarUtcDateTime = (date: Date) =>
+  [
+    date.getUTCFullYear(),
+    String(date.getUTCMonth() + 1).padStart(2, "0"),
+    String(date.getUTCDate()).padStart(2, "0"),
+  ].join("") +
+  "T" +
+  [
+    String(date.getUTCHours()).padStart(2, "0"),
+    String(date.getUTCMinutes()).padStart(2, "0"),
+    String(date.getUTCSeconds()).padStart(2, "0"),
+  ].join("") +
+  "Z";
+
+const addCleaningToCalendar = ({
+  clientName,
+  date,
+  startTime,
+  estimatedHours,
+  address,
+  notes,
+  eventId,
+}: {
+  clientName: string;
+  date: string;
+  startTime: string;
+  estimatedHours: number;
+  address: string;
+  notes: string;
+  eventId: string;
+}) => {
+  const start = new Date(`${date}T${startTime}:00`);
+
+  if (Number.isNaN(start.getTime())) {
+    return;
+  }
+
+  const end = new Date(start.getTime() + estimatedHours * 60 * 60 * 1000);
+
+  const calendarLines = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Mila Cleaning Tracker//EN",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    "BEGIN:VEVENT",
+    `UID:${escapeCalendarText(eventId)}@mila-cleaning-tracker`,
+    `DTSTAMP:${formatCalendarUtcDateTime(new Date())}`,
+    `DTSTART:${formatCalendarDateTime(start)}`,
+    `DTEND:${formatCalendarDateTime(end)}`,
+    `SUMMARY:${escapeCalendarText(`Cleaning - ${clientName}`)}`,
+    address ? `LOCATION:${escapeCalendarText(address)}` : "",
+    notes ? `DESCRIPTION:${escapeCalendarText(notes)}` : "",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].filter(Boolean);
+
+  const calendarFile = new Blob([calendarLines.join("\r\n")], {
+    type: "text/calendar;charset=utf-8",
+  });
+
+  const calendarUrl = URL.createObjectURL(calendarFile);
+
+  const link = document.createElement("a");
+
+  link.href = calendarUrl;
+  link.download = `${clientName
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-|-$/g, "")}-${date}.ics`;
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(calendarUrl);
+  }, 1000);
+};
+
+function MetricCard({ label, value, note, icon: Icon }: MetricCardProps) {
   return (
     <div className="rounded-2xl border border-[var(--border-soft)] bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
@@ -61,11 +153,7 @@ function MetricCard({
             {value}
           </p>
 
-          {note && (
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              {note}
-            </p>
-          )}
+          {note && <p className="mt-1 text-xs text-[var(--muted)]">{note}</p>}
         </div>
 
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--cream)] text-[var(--blue-dark)]">
@@ -81,84 +169,68 @@ function Dashboard() {
   const clientContext = useContext(ClientContext);
   const paymentContext = useContext(PaymentContext);
 
+  if (!cleaningContext) {
+    throw new Error("CleaningContext not found");
+  }
 
-    if (!cleaningContext) {
-      throw new Error("CleaningContext not found");
-    }
+  if (!clientContext) {
+    throw new Error("ClientContext not found");
+  }
 
-    if (!clientContext) {
-      throw new Error("ClientContext not found");
-    }
+  if (!paymentContext) {
+    throw new Error("PaymentContext not found");
+  }
 
-    if (!paymentContext) {
-      throw new Error("PaymentContext not found");
-    }
+  const { cleanings } = cleaningContext;
+  const { clients } = clientContext;
+  const { payments } = paymentContext;
 
-    const { cleanings } = cleaningContext;
-    const { clients } = clientContext;
-    const { payments } = paymentContext;
+  const now = new Date();
+  const today = getLocalDateKey(now);
 
-    const now = new Date();
-    const today = getLocalDateKey(now);
+  const currentYear = String(now.getFullYear());
+  const currentMonth = String(now.getMonth() + 1).padStart(2, "0");
 
-    const currentYear = String(now.getFullYear());
-    const currentMonth = String(
-      now.getMonth() + 1
-    ).padStart(2, "0");
+  const currentMonthPrefix = `${currentYear}-${currentMonth}`;
 
-    const currentMonthPrefix =
-      `${currentYear}-${currentMonth}`;
+  const currentMonthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  }).format(now);
 
-    const currentMonthLabel =
-      new Intl.DateTimeFormat("en-US", {
-        month: "long",
-        year: "numeric",
-      }).format(now);
+  const activeClients = clients.filter((client) => client.active).length;
 
-    const activeClients = clients.filter(
-      (client) => client.active
-    ).length;
+  const monthCleanings = cleanings.filter(
+    (cleaning) =>
+      cleaning.date.startsWith(currentMonthPrefix) &&
+      cleaning.status !== "Cancelled",
+  );
 
-    const monthCleanings = cleanings.filter(
-      (cleaning) =>
-        cleaning.date.startsWith(currentMonthPrefix) &&
-        cleaning.status !== "Cancelled"
-    );
-
-    const completedThisMonth = monthCleanings.filter(
-      (cleaning) => cleaning.status === "Completed"
-    ).length;
+  const completedThisMonth = monthCleanings.filter(
+    (cleaning) => cleaning.status === "Completed",
+  ).length;
 
   const upcomingCleanings = cleanings
     .filter(
-      (cleaning) =>
-        cleaning.status === "Scheduled" &&
-        cleaning.date >= today
+      (cleaning) => cleaning.status === "Scheduled" && cleaning.date >= today,
     )
     .sort((first, second) =>
       `${first.date}T${first.startTime}`.localeCompare(
-        `${second.date}T${second.startTime}`
-      )
+        `${second.date}T${second.startTime}`,
+      ),
     );
 
-    const nextCleanings = upcomingCleanings.slice(0, 5);
+  const nextCleanings = upcomingCleanings.slice(0, 5);
 
-    const unpaidPayments = payments.filter(
-      (payment) => !payment.paid
-  );
+  const unpaidPayments = payments.filter((payment) => !payment.paid);
 
   const unpaidBalance = unpaidPayments.reduce(
-    (total, payment) =>
-      total + payment.amountCharged,
-    0
+    (total, payment) => total + payment.amountCharged,
+    0,
   );
 
   const getClientById = (clientId: string) =>
-    clients.find(
-      (client) => client.firestoreId === clientId
-    );
-
-  
+    clients.find((client) => client.firestoreId === clientId);
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8">
@@ -173,9 +245,7 @@ function Dashboard() {
             Dashboard
           </h1>
 
-          <p className="mt-1 text-[var(--muted)]">
-            {currentMonthLabel}
-          </p>
+          <p className="mt-1 text-[var(--muted)]">{currentMonthLabel}</p>
         </div>
 
         <Link
@@ -251,9 +321,7 @@ function Dashboard() {
 
                 <p className="mt-1 text-sm text-amber-800">
                   {unpaidPayments.length}{" "}
-                  {unpaidPayments.length === 1
-                    ? "payment is"
-                    : "payments are"}{" "}
+                  {unpaidPayments.length === 1 ? "payment is" : "payments are"}{" "}
                   still unpaid.
                 </p>
               </div>
@@ -301,9 +369,7 @@ function Dashboard() {
         ) : (
           <div className="space-y-3">
             {nextCleanings.map((cleaning) => {
-              const client = getClientById(
-                cleaning.clientId
-              );
+              const client = getClientById(cleaning.clientId);
 
               return (
                 <div
@@ -321,17 +387,39 @@ function Dashboard() {
                           "Client unavailable"}
                       </p>
 
-                      <p className="mt-1 text-sm text-[var(--muted)]">
-                        {formatDate(cleaning.date)} at{" "}
-                        {cleaning.startTime}
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addCleaningToCalendar({
+                            clientName:
+                              client?.name ?? cleaning.clientName ?? "Cleaning",
+                            date: cleaning.date,
+                            startTime: cleaning.startTime,
+                            estimatedHours: cleaning.estimatedHours,
+                            address: cleaning.clientAddress ?? "",
+                            notes: cleaning.clientNotes ?? cleaning.notes ?? "",
+                            eventId:
+                              cleaning.firestoreId ??
+                              `${cleaning.clientId}-${cleaning.date}-${cleaning.startTime}`,
+                          })
+                        }
+                        className="mt-1 flex items-center gap-1 text-left text-sm font-medium text-[var(--blue-dark)] hover:underline"
+                        aria-label={`Add ${
+                          client?.name ?? cleaning.clientName ?? "cleaning"
+                        } on ${formatDate(cleaning.date)} at ${
+                          cleaning.startTime
+                        } to calendar`}
+                      >
+                        <CalendarDays size={14} />
+                        <span>
+                          {formatDate(cleaning.date)} at {cleaning.startTime}
+                        </span>
+                      </button>
                     </div>
 
                     <span className="rounded-full bg-[var(--cream)] px-3 py-1 text-xs font-semibold text-[var(--blue-dark)]">
                       {cleaning.estimatedHours}{" "}
-                      {cleaning.estimatedHours === 1
-                        ? "hour"
-                        : "hours"}
+                      {cleaning.estimatedHours === 1 ? "hour" : "hours"}
                     </span>
                   </div>
 
