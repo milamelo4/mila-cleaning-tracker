@@ -4,7 +4,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Clock,
   KeyRound,
   MapPin,
   MessageSquareText,
@@ -20,6 +19,7 @@ import { ClientContext } from "../context/ClientContext";
 import { MemberContext } from "../context/MemberContext";
 
 import CleaningCalendar from "../components/CleaningCalendar";
+import { addCleaningToCalendar } from "../utils/calendar";
 
 type HelperView = "upcoming" | "history";
 
@@ -266,22 +266,20 @@ function Cleanings() {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <p className="text-lg font-semibold text-[var(--charcoal)]">
-                          {clientName ||
-                            "Client unavailable"}
+                          {clientName || "Client unavailable"}
                         </p>
 
-                        {!isAdmin &&
-                          helperView === "history" && (
-                            <span className="shrink-0 rounded-full bg-[var(--olive-soft)] px-3 py-1 text-xs font-semibold text-[var(--olive-deep)]">
-                              Completed
-                            </span>
-                          )}
+                        {!isAdmin && helperView === "history" && (
+                          <span className="shrink-0 rounded-full bg-[var(--olive-soft)] px-3 py-1 text-xs font-semibold text-[var(--olive-deep)]">
+                            Completed
+                          </span>
+                        )}
                       </div>
 
                       {clientAddress ? (
                         <a
                           href={`https://maps.apple.com/search?query=${encodeURIComponent(
-                            clientAddress
+                            clientAddress,
                           )}`}
                           target="_blank"
                           rel="noreferrer"
@@ -301,9 +299,7 @@ function Cleanings() {
                         <Phone size={16} />
 
                         {clientPhone ? (
-                          <a href={`tel:${clientPhone}`}>
-                            {clientPhone}
-                          </a>
+                          <a href={`tel:${clientPhone}`}>{clientPhone}</a>
                         ) : (
                           <span>No phone number</span>
                         )}
@@ -312,15 +308,11 @@ function Cleanings() {
                       {clientGateCode && (
                         <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
                           <KeyRound size={18} />
-                          <span>
-                            Gate/Garage:{" "}
-                            {clientGateCode}
-                          </span>
+                          <span>Gate/Garage: {clientGateCode}</span>
                         </p>
                       )}
 
-                      {(clientNotes ||
-                        cleaning.notes) && (
+                      {(clientNotes || cleaning.notes) && (
                         <div className="mt-2 flex items-start gap-2 text-[var(--blue-dark)]">
                           <MessageSquareText
                             size={18}
@@ -348,88 +340,106 @@ function Cleanings() {
                           </div>
                         </div>
                       )}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          addCleaningToCalendar({
+                            clientName: clientName || "Cleaning",
+                            date: cleaning.date,
+                            startTime: cleaning.startTime,
+                            estimatedHours: cleaning.estimatedHours,
+                            address: clientAddress || "",
+                            notes: [
+                              clientNotes
+                                ? `Cleaning Instructions: ${clientNotes}`
+                                : "",
+                              cleaning.notes
+                                ? `Appointment notes: ${cleaning.notes}`
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join("\n"),
+                            eventId:
+                              cleaning.firestoreId ??
+                              `${cleaning.clientId}-${cleaning.date}-${cleaning.startTime}`,
+                          })
+                        }
+                        className="mt-1 flex items-center gap-2 text-left font-medium text-[var(--blue-dark)] hover:underline"
+                        aria-label={`Add ${
+                          clientName || "cleaning"
+                        } on ${formatDateHeading(cleaning.date)} at ${
+                          cleaning.startTime
+                        } to calendar`}
+                      >
+                        <CalendarDays size={16} />
 
-                      <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
-                        <Clock size={16} />
                         <span>
+                          {formatDateHeading(cleaning.date)} at{" "}
                           {cleaning.startTime}
                         </span>
-                      </p>
+                      </button>
 
                       <p className="mt-1 flex items-center gap-2 text-[var(--blue-dark)]">
                         <Timer size={18} />
                         <span>
                           {cleaning.estimatedHours}{" "}
-                          {cleaning.estimatedHours === 1
-                            ? "hour"
-                            : "hours"}
+                          {cleaning.estimatedHours === 1 ? "hour" : "hours"}
                         </span>
                       </p>
 
                       {isAdmin && (
                         <p className="mt-1 flex items-start gap-2 text-[var(--blue-dark)]">
-                          <UserRound
-                            size={18}
-                            className="mt-0.5 shrink-0"
-                          />
+                          <UserRound size={18} className="mt-0.5 shrink-0" />
 
                           <span>
-                            {assignedHelperEmails.length >
-                            0
-                              ? assignedHelperEmails.join(
-                                  ", "
-                                )
+                            {assignedHelperEmails.length > 0
+                              ? assignedHelperEmails.join(", ")
                               : "No helper assigned"}
                           </span>
                         </p>
                       )}
 
-                      {isAdmin &&
-                        cleaning.firestoreId && (
-                          <div className="mt-4 flex flex-wrap gap-4">
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(
-                                  `/cleanings/${cleaning.firestoreId}/edit`
-                                )
+                      {isAdmin && cleaning.firestoreId && (
+                        <div className="mt-4 flex flex-wrap gap-4">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(
+                                `/cleanings/${cleaning.firestoreId}/edit`,
+                              )
+                            }
+                            className="flex items-center gap-2 text-sm font-medium text-[var(--blue-dark)] hover:underline"
+                          >
+                            <Pencil size={16} />
+                            Edit Cleaning
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              const firestoreId = cleaning.firestoreId;
+
+                              if (!firestoreId) {
+                                return;
                               }
-                              className="flex items-center gap-2 text-sm font-medium text-[var(--blue-dark)] hover:underline"
-                            >
-                              <Pencil size={16} />
-                              Edit Cleaning
-                            </button>
 
-                            <button
-                              type="button"
-                              onClick={async () => {
-                                const firestoreId =
-                                  cleaning.firestoreId;
+                              const confirmed = window.confirm(
+                                "Delete this cleaning? This cannot be undone.",
+                              );
 
-                                if (!firestoreId) {
-                                  return;
-                                }
+                              if (!confirmed) {
+                                return;
+                              }
 
-                                const confirmed =
-                                  window.confirm(
-                                    "Delete this cleaning? This cannot be undone."
-                                  );
-
-                                if (!confirmed) {
-                                  return;
-                                }
-
-                                await deleteCleaning(
-                                  firestoreId
-                                );
-                              }}
-                              className="flex items-center gap-2 text-sm font-medium text-red-700 hover:underline"
-                            >
-                              <Trash2 size={16} />
-                              Delete Cleaning
-                            </button>
-                          </div>
-                        )}
+                              await deleteCleaning(firestoreId);
+                            }}
+                            className="flex items-center gap-2 text-sm font-medium text-red-700 hover:underline"
+                          >
+                            <Trash2 size={16} />
+                            Delete Cleaning
+                          </button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
