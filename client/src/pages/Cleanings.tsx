@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   CalendarDays,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   KeyRound,
@@ -262,10 +263,24 @@ function Cleanings() {
                   return (
                     <div
                       key={cleaning.firestoreId}
-                      className="rounded-2xl border border-[var(--border-soft)] bg-white p-5 shadow-sm"
+                      className={`rounded-2xl border p-5 shadow-sm ${
+                        cleaning.status === "Completed"
+                          ? "border-emerald-200 bg-emerald-50"
+                          : "border-[var(--border-soft)] bg-white"
+                      }`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <p className="text-lg font-semibold text-[var(--charcoal)]">
+                        <p
+                          className={`flex items-center gap-2 text-lg font-semibold ${
+                            cleaning.status === "Completed"
+                              ? "text-emerald-800"
+                              : "text-[var(--charcoal)]"
+                          }`}
+                        >
+                          {cleaning.status === "Completed" && (
+                            <CheckCircle2 size={18} className="shrink-0" />
+                          )}
+
                           {clientName || "Client unavailable"}
                         </p>
 
