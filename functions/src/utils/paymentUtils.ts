@@ -1,4 +1,4 @@
-import type {PaymentSummary} from "./types";
+import type {PaymentSummary} from "../types/business";
 
 /**
  * Returns the date used for financial reporting.

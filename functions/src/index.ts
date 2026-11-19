@@ -10,7 +10,7 @@ import type {
   CleaningSummary,
   HistoryMessage,
   PaymentSummary,
-} from "./types";
+} from "./types/business";
 import {
   addDays,
   addMonths,
@@ -19,9 +19,9 @@ import {
   getMonthEnd,
   getMonthStart,
   getUtahDateKey,
-} from "./dateUtils";
+} from "./utils/dateUtils";
 
-import {calculateFinancialMetrics} from "./financialMetrics";
+import {calculateFinancialMetrics} from "./metrics/financialMetrics";
 
 initializeApp();
 

@@ -1,5 +1,5 @@
-import type {PaymentSummary} from "./types";
-import {getPaymentReferenceDate} from "./paymentUtils";
+import type {PaymentSummary} from "../types/business";
+import {getPaymentReferenceDate} from "../utils/paymentUtils";
 
 export type FinancialMetrics = {
   billedRevenueByMonth: Record<string, number>;
