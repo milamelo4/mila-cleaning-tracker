@@ -507,6 +507,88 @@ service cloud.firestore {
 
         allow delete: if isAdmin();
       }
+
+      match /assistantChats/{chatId} {
+
+  function validAssistantChat(data) {
+    return data.keys().hasAll([
+        "title",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ])
+      && data.keys().hasOnly([
+        "title",
+        "createdBy",
+        "createdAt",
+        "updatedAt"
+      ])
+
+      && data.title is string
+      && data.title.size() > 0
+      && data.title.size() <= 80
+
+      && data.createdBy is string
+      && data.createdBy == request.auth.uid
+
+      && data.createdAt is timestamp
+      && data.updatedAt is timestamp;
+  }
+
+  allow read: if isAdmin();
+
+  allow create: if isAdmin()
+    && validAssistantChat(request.resource.data);
+
+  allow update: if isAdmin()
+    && request.resource.data.createdBy
+      == resource.data.createdBy
+    && request.resource.data.createdAt
+      == resource.data.createdAt
+    && request.resource.data.title
+      == resource.data.title
+    && request.resource.data.updatedAt
+      is timestamp;
+
+  allow delete: if isAdmin();
+
+  match /messages/{messageId} {
+
+    function validAssistantMessage(data) {
+      return data.keys().hasAll([
+          "role",
+          "content",
+          "createdAt"
+        ])
+        && data.keys().hasOnly([
+          "role",
+          "content",
+          "createdAt"
+        ])
+
+        && data.role is string
+        && data.role in [
+          "user",
+          "assistant"
+        ]
+
+        && data.content is string
+        && data.content.size() > 0
+        && data.content.size() <= 20000
+
+        && data.createdAt is timestamp;
+    }
+
+    allow read: if isAdmin();
+
+    allow create: if isAdmin()
+      && validAssistantMessage(
+        request.resource.data
+      );
+
+    allow delete: if isAdmin();
+  }
+}
     }
   }
 }
