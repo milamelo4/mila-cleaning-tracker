@@ -10,13 +10,16 @@ export type CleaningSummary = {
   date: string;
   startTime: string;
   estimatedHours: number;
+  assignedHelpers: string[];
   status: string;
 };
 
-export type PaymentBillingType =
+export type BillingType =
   | "Per Cleaning"
   | "Biweekly"
   | "Fixed Monthly";
+
+export type PaymentBillingType = BillingType;
 
 export type PaymentSummary = {
   id: string;
@@ -36,7 +39,11 @@ export type PaymentSummary = {
 export type ClientSummary = {
   id: string;
   name: string;
+  billingType: BillingType;
   pricePerCleaning: number;
+  monthlyRate: number;
+  biweeklyRate: number;
+  biweeklyAnchorDate: string;
   frequency: string;
   helperNeeded: boolean;
   active: boolean;
