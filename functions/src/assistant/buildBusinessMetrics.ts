@@ -1,7 +1,9 @@
+
 import type {
   ClientSummary,
   CleaningSummary,
   PaymentSummary,
+  HelperSummary,
 } from "../types/business";
 
 import {calculateFinancialMetrics} from "../metrics/financialMetrics";
@@ -15,6 +17,7 @@ type BuildBusinessMetricsInput = {
   clients: ClientSummary[];
   cleanings: CleaningSummary[];
   payments: PaymentSummary[];
+  helpers: HelperSummary[];
   todayDate: string;
 };
 
@@ -27,6 +30,7 @@ export function buildBusinessMetrics({
   clients,
   cleanings,
   payments,
+  helpers,
   todayDate,
 }: BuildBusinessMetricsInput) {
   const {
@@ -54,12 +58,13 @@ export function buildBusinessMetrics({
   } = calculateFinancialMetrics(payments);
 
   const revenueProjection =
-  calculateRevenueProjectionMetrics(
-    clients,
-    cleanings,
-    payments,
-    todayDate
-  );
+    calculateRevenueProjectionMetrics(
+      clients,
+      cleanings,
+      payments,
+      todayDate,
+      helpers
+    );
 
   const projectedBilledRevenueByMonth = {
     ...billedRevenueByMonth,
@@ -73,12 +78,44 @@ export function buildBusinessMetrics({
     )
   ) {
     projectedBilledRevenueByMonth[month] =
-    (
-      projectedBilledRevenueByMonth[
-        month
-      ] ?? 0
-    ) + remainingRevenue;
+      (
+        projectedBilledRevenueByMonth[
+          month
+        ] ?? 0
+      ) + remainingRevenue;
   }
+
+
+  const projectedNetAfterHelperByMonth:
+    Record<string, number> = {};
+
+  const projectionMonths = new Set([
+    ...Object.keys(projectedBilledRevenueByMonth),
+    ...Object.keys(helperPayoutsByMonth),
+    ...Object.keys(
+      revenueProjection.remainingScheduledHelperPayoutsByMonth
+    ),
+  ]);
+
+  for (const month of projectionMonths) {
+    const billed =
+      projectedBilledRevenueByMonth[month] ?? 0;
+
+    const recordedHelperPayouts =
+      helperPayoutsByMonth[month] ?? 0;
+
+    const scheduledHelperPayouts =
+      revenueProjection
+        .remainingScheduledHelperPayoutsByMonth[month] ?? 0;
+
+    projectedNetAfterHelperByMonth[month] =
+      Math.round(
+        (billed -
+          recordedHelperPayouts -
+          scheduledHelperPayouts) * 100
+      ) / 100;
+  }
+
 
   const {
     clientInsights,
@@ -107,6 +144,7 @@ export function buildBusinessMetrics({
     revenueProjection: {
       ...revenueProjection,
       projectedBilledRevenueByMonth,
+      projectedNetAfterHelperByMonth,
     },
     financials: {
       billedRevenueByMonth,

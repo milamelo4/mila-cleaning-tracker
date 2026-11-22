@@ -34,8 +34,18 @@ service cloud.firestore {
 
         allow list: if isAdmin();
 
-        allow create, update, delete: if isAdmin();
-      }
+        allow create, update: if isAdmin()
+        && (
+          !request.resource.data.keys().hasAny(["payoutPercentage"])
+          || (
+            request.resource.data.payoutPercentage is number
+            && request.resource.data.payoutPercentage >= 0
+            && request.resource.data.payoutPercentage <= 100
+          )
+        );
+
+      allow delete: if isAdmin();
+            }
 
       match /clients/{clientId} {
 

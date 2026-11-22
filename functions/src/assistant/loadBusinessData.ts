@@ -1,15 +1,18 @@
+
 import {getFirestore} from "firebase-admin/firestore";
 
 import type {
   ClientSummary,
   CleaningSummary,
   PaymentSummary,
+  HelperSummary,
 } from "../types/business";
 
 export type BusinessData = {
   clients: ClientSummary[];
   cleanings: CleaningSummary[];
   payments: PaymentSummary[];
+  helpers: HelperSummary[];
 };
 
 /**
@@ -24,6 +27,7 @@ Promise<BusinessData> {
     clientsSnapshot,
     cleaningsSnapshot,
     paymentsSnapshot,
+    helpersSnapshot,
   ] = await Promise.all([
     db.collection(
       "businesses/mila-cleaning-tracker/clients"
@@ -34,6 +38,9 @@ Promise<BusinessData> {
     db.collection(
       "businesses/mila-cleaning-tracker/payments"
     ).get(),
+    db.collection(
+      "businesses/mila-cleaning-tracker/members"
+    ).where("role", "==", "helper").get(),
   ]);
 
   const clients: ClientSummary[] =
@@ -148,6 +155,19 @@ Promise<BusinessData> {
           data.billingType === "Per Cleaning" ?
             data.billingType :
             undefined,
+
+        cleaningId:
+          typeof data.cleaningId === "string" ?
+            data.cleaningId :
+            "",
+        includedCleaningIds:
+          Array.isArray(data.includedCleaningIds) ?
+            data.includedCleaningIds.filter(
+              (id): id is string =>
+                typeof id === "string"
+            ) :
+            [],
+
         cleaningDate:
           typeof data.cleaningDate === "string" ?
             data.cleaningDate :
@@ -181,9 +201,26 @@ Promise<BusinessData> {
       };
     });
 
+  const helpers: HelperSummary[] =
+    helpersSnapshot.docs.map((doc) => {
+      const rate = doc.data().payoutPercentage;
+
+      return {
+        uid: doc.id,
+        payoutPercentage:
+          typeof rate === "number" &&
+          Number.isFinite(rate) &&
+          rate >= 0 &&
+          rate <= 100 ?
+            rate :
+            50,
+      };
+    });
+
   return {
     clients,
     cleanings,
     payments,
+    helpers,
   };
 }

@@ -1,3 +1,4 @@
+
 export type HistoryMessage = {
   role?: unknown;
   content?: unknown;
@@ -26,9 +27,11 @@ export type PaymentSummary = {
   clientId: string;
   clientName: string;
   billingType?: PaymentBillingType;
+  cleaningId?: string;
   cleaningDate: string;
   periodStart?: string;
   periodEnd?: string;
+  includedCleaningIds?: string[];
   amountCharged: number;
   actualHours: number;
   helperPayout: number;
@@ -47,4 +50,9 @@ export type ClientSummary = {
   frequency: string;
   helperNeeded: boolean;
   active: boolean;
+};
+
+export type HelperSummary = {
+  uid: string;
+  payoutPercentage: number;
 };

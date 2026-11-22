@@ -137,11 +137,15 @@ export function MemberProvider({
               return {
                 uid: helperDocument.id,
                 email:
-                  typeof helperData.email ===
-                  "string"
-                    ? helperData.email
-                    : "",
+                  typeof helperData.email === "string" ? helperData.email : "",
                 role: "helper" as const,
+                payoutPercentage:
+                  typeof helperData.payoutPercentage === "number" &&
+                  Number.isFinite(helperData.payoutPercentage) &&
+                  helperData.payoutPercentage >= 0 &&
+                  helperData.payoutPercentage <= 100
+                    ? helperData.payoutPercentage
+                    : 50,
               };
             }
           );

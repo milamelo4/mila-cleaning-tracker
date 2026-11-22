@@ -1,3 +1,4 @@
+
 import {HttpsError} from "firebase-functions/v2/https";
 import OpenAI from "openai";
 
@@ -80,6 +81,7 @@ export async function handleAskMilaAssistant({
     clients,
     cleanings,
     payments,
+    helpers,
   } = await loadBusinessData();
 
   const todayDate = getUtahDateKey();
@@ -88,6 +90,7 @@ export async function handleAskMilaAssistant({
     clients,
     cleanings,
     payments,
+    helpers,
     todayDate,
   });
 

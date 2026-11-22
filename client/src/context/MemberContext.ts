@@ -8,6 +8,7 @@ export type Member = {
   uid: string;
   email: string;
   role: MemberRole;
+  payoutPercentage?: number;
 };
 
 export type MemberContextType = {

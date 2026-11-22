@@ -14,8 +14,13 @@ import {
 import { CleaningContext } from "../context/CleaningContext";
 import { ClientContext } from "../context/ClientContext";
 import { PaymentContext } from "../context/PaymentContext";
+import { MemberContext } from "../context/MemberContext";
+
 import type { Payment } from "../types/payment";
 import { calculateNetEarnings } from "../utils/paymentCalculations";
+import { calculateFinanceProjection } from "../utils/financeProjections";
+
+import HelperPaySettings from "../components/HelperPaySettings";
 
 type Period =
   | "this-month"
@@ -125,6 +130,7 @@ function Finances() {
   const paymentContext = useContext(PaymentContext);
   const cleaningContext = useContext(CleaningContext);
   const clientContext = useContext(ClientContext);
+  const memberContext = useContext(MemberContext);
 
   if (!paymentContext) {
     throw new Error("PaymentContext not found");
@@ -141,6 +147,7 @@ function Finances() {
   const { payments } = paymentContext;
   const { cleanings } = cleaningContext;
   const { clients } = clientContext;
+  const helpers = memberContext?.helpers ?? [];
 
   const [period, setPeriod] = useState<Period>("this-month");
   const [clientFilter, setClientFilter] = useState("all");
@@ -256,61 +263,29 @@ function Finances() {
       0
     );
 
-  /*
-   * Projection
-   *
-   * Saved payment records = actual.
-   * Future scheduled cleanings without a payment record = estimate.
-   */
-  const paymentByCleaningId = new Map(
-    payments.map((payment) => [
-      payment.cleaningId,
-      payment,
-    ])
-  );
 
-  const remainingScheduledCleanings = cleanings.filter(
-    (cleaning) =>
-      cleaning.status === "Scheduled" &&
-      cleaning.date >= today &&
-      matchesPeriod(cleaning.date) &&
-      matchesClient(cleaning.clientId) &&
-      (
-        !cleaning.firestoreId ||
-        !paymentByCleaningId.has(cleaning.firestoreId)
-      )
-  );
-
-  const remainingScheduledNet =
-    remainingScheduledCleanings.reduce(
-      (total, cleaning) => {
-        const client = clients.find(
-          (client) =>
-            client.firestoreId === cleaning.clientId
-        );
-
-        const grossEstimate =
-          client?.pricePerCleaning ?? 0;
-
-        const estimatedHelperPayout =
-          cleaning.assignedHelpers.length > 0
-            ? grossEstimate / 2
-            : 0;
-
-        return (
-          total +
-          calculateNetEarnings(
-            grossEstimate,
-            estimatedHelperPayout
-          )
-        );
-      },
-      0
-    );
+  const {
+    remainingScheduledCleanings,
+    remainingScheduledNet,
+    hasIncompleteEstimates,
+  } = calculateFinanceProjection({
+    clients,
+    cleanings,
+    payments,
+    helpers,
+    today,
+    matchesPeriod,
+    matchesClient,
+  });
 
   const expectedNet =
     netEarnings + remainingScheduledNet;
 
+  if (hasIncompleteEstimates) {
+    console.warn(
+      "Some scheduled cleaning estimates are incomplete."
+    );
+  }
   /*
    * Actual financial performance grouped by client.
    */
@@ -375,7 +350,7 @@ function Finances() {
           Track your income, hours, and business performance.
         </p>
       </div>
-
+      <HelperPaySettings />
       {/* Filters */}
       <section className="rounded-2xl border border-[var(--border-soft)] bg-white p-4 shadow-sm">
         <div className="grid gap-4 sm:grid-cols-2">
@@ -390,28 +365,16 @@ function Finances() {
             <select
               id="finance-period"
               value={period}
-              onChange={(event) =>
-                setPeriod(
-                  event.target.value as Period
-                )
-              }
+              onChange={(event) => setPeriod(event.target.value as Period)}
               className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3 text-[var(--charcoal)]"
             >
-              <option value="this-month">
-                This Month
-              </option>
+              <option value="this-month">This Month</option>
 
-              <option value="last-month">
-                Last Month
-              </option>
+              <option value="last-month">Last Month</option>
 
-              <option value="this-year">
-                This Year
-              </option>
+              <option value="this-year">This Year</option>
 
-              <option value="last-year">
-                Last Year
-              </option>
+              <option value="last-year">Last Year</option>
             </select>
           </div>
 
@@ -426,20 +389,13 @@ function Finances() {
             <select
               id="finance-client"
               value={clientFilter}
-              onChange={(event) =>
-                setClientFilter(event.target.value)
-              }
+              onChange={(event) => setClientFilter(event.target.value)}
               className="w-full rounded-xl border border-[var(--border-soft)] bg-white px-4 py-3 text-[var(--charcoal)]"
             >
-              <option value="all">
-                All Clients
-              </option>
+              <option value="all">All Clients</option>
 
               {sortedClients.map((client) => (
-                <option
-                  key={client.firestoreId}
-                  value={client.firestoreId}
-                >
+                <option key={client.firestoreId} value={client.firestoreId}>
                   {client.name}
                 </option>
               ))}
@@ -509,9 +465,7 @@ function Finances() {
 
           <MetricCard
             label="Average $ / Hour"
-            value={`${formatCurrency(
-              averageHourly
-            )}/hr`}
+            value={`${formatCurrency(averageHourly)}/hr`}
             note="Your net divided by hours"
             icon={TrendingUp}
           />
@@ -556,14 +510,10 @@ function Finances() {
               </p>
 
               <p className="mt-2 text-2xl font-bold text-[var(--charcoal)]">
-                {formatCurrency(
-                  remainingScheduledNet
-                )}
+                {formatCurrency(remainingScheduledNet)}
               </p>
 
-              <p className="mt-1 text-xs text-[var(--muted)]">
-                Estimated net
-              </p>
+              <p className="mt-1 text-xs text-[var(--muted)]">Estimated net</p>
             </div>
 
             <div>
@@ -607,9 +557,7 @@ function Finances() {
           <div className="grid gap-3 lg:grid-cols-2">
             {clientSummaries.map((summary) => {
               const hourlyRate =
-                summary.hours > 0
-                  ? summary.net / summary.hours
-                  : 0;
+                summary.hours > 0 ? summary.net / summary.hours : 0;
 
               return (
                 <div
@@ -622,9 +570,7 @@ function Finances() {
 
                   <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-[var(--muted)]">
-                        Gross
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">Gross</p>
 
                       <p className="mt-1 font-semibold text-[var(--charcoal)]">
                         {formatCurrency(summary.gross)}
@@ -632,9 +578,7 @@ function Finances() {
                     </div>
 
                     <div>
-                      <p className="text-xs text-[var(--muted)]">
-                        Your Net
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">Your Net</p>
 
                       <p className="mt-1 font-semibold text-[var(--charcoal)]">
                         {formatCurrency(summary.net)}
@@ -642,9 +586,7 @@ function Finances() {
                     </div>
 
                     <div>
-                      <p className="text-xs text-[var(--muted)]">
-                        Hours
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">Hours</p>
 
                       <p className="mt-1 font-semibold text-[var(--charcoal)]">
                         {formatHours(summary.hours)}
@@ -652,9 +594,7 @@ function Finances() {
                     </div>
 
                     <div>
-                      <p className="text-xs text-[var(--muted)]">
-                        Average
-                      </p>
+                      <p className="text-xs text-[var(--muted)]">Average</p>
 
                       <p className="mt-1 font-semibold text-[var(--charcoal)]">
                         {formatCurrency(hourlyRate)}/hr
@@ -664,10 +604,7 @@ function Finances() {
 
                   {summary.helperPayout > 0 && (
                     <p className="mt-4 border-t border-[var(--border-soft)] pt-3 text-xs text-[var(--muted)]">
-                      Helper payouts:{" "}
-                      {formatCurrency(
-                        summary.helperPayout
-                      )}
+                      Helper payouts: {formatCurrency(summary.helperPayout)}
                     </p>
                   )}
                 </div>
@@ -706,38 +643,33 @@ function Finances() {
           </div>
         ) : (
           <div className="overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-white shadow-sm">
-            {unpaidPayments.map(
-              (payment, index) => (
-                <div
-                  key={
-                    payment.firestoreId ??
-                    `${payment.clientId}-${getPaymentReferenceDate(payment)}-${index}`
-                  }
-                  className={`flex items-center justify-between gap-4 p-4 ${
-                    index !==
-                    unpaidPayments.length - 1
-                      ? "border-b border-[var(--border-soft)]"
-                      : ""
-                  }`}
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-[var(--charcoal)]">
-                      {payment.clientName}
-                    </p>
+            {unpaidPayments.map((payment, index) => (
+              <div
+                key={
+                  payment.firestoreId ??
+                  `${payment.clientId}-${getPaymentReferenceDate(payment)}-${index}`
+                }
+                className={`flex items-center justify-between gap-4 p-4 ${
+                  index !== unpaidPayments.length - 1
+                    ? "border-b border-[var(--border-soft)]"
+                    : ""
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-[var(--charcoal)]">
+                    {payment.clientName}
+                  </p>
 
-                    <p className="mt-1 text-sm text-[var(--muted)]">
-                      {getPaymentDateLabel(payment)}
-                    </p>
-                  </div>
-
-                  <p className="shrink-0 font-bold text-[var(--charcoal)]">
-                    {formatCurrency(
-                      payment.amountCharged
-                    )}
+                  <p className="mt-1 text-sm text-[var(--muted)]">
+                    {getPaymentDateLabel(payment)}
                   </p>
                 </div>
-              )
-            )}
+
+                <p className="shrink-0 font-bold text-[var(--charcoal)]">
+                  {formatCurrency(payment.amountCharged)}
+                </p>
+              </div>
+            ))}
           </div>
         )}
       </section>

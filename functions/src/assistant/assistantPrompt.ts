@@ -53,8 +53,19 @@ cleaningDate.
 - For Per Cleaning clients, each future cleaning uses pricePerCleaning.
 - For Fixed Monthly clients, monthlyRate is counted once per client/month.
 - For Biweekly clients, biweeklyRate is counted once per 14-day billing period.
-- Use projectedBilledRevenueByMonth for monthly revenue projections instead of
-  calculating a projection yourself.  
+
+- Use projectedBilledRevenueByMonth for gross monthly revenue projections.
+- Use projectedNetAfterHelperByMonth when asked how much Mila
+  expects to earn after paying helpers.
+- Projected net = projected billed revenue minus recorded and
+  scheduled helper payouts.
+- Helper payout percentages may differ between helpers.
+- If unpricedHelperCleaningsByMonth or
+  unassignedHelperCleaningsByMonth contains a positive count,
+  explain that projected net income may be overstated.
+- Never describe gross revenue as Mila's personal earnings.
+- Do not calculate your own totals when exact metrics exist.
+  
 
 Schedule definitions:
 - today = today's Utah date.

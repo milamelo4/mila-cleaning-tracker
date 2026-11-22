@@ -1,12 +1,18 @@
+
 import type {
   ClientSummary,
   CleaningSummary,
   PaymentSummary,
+  HelperSummary,
 } from "../types/business";
 
 import {
   getBiweeklyPeriod,
 } from "../utils/billingDateUtils";
+
+import {
+  getDefaultHelperPayout,
+} from "../utils/helperPayoutUtils";
 
 export type RevenueProjectionMetrics = {
   remainingScheduledCleaningsByMonth:
@@ -15,12 +21,21 @@ export type RevenueProjectionMetrics = {
   remainingScheduledRevenueByMonth:
     Record<string, number>;
 
+  remainingScheduledHelperPayoutsByMonth:
+    Record<string, number>;
+
   unpricedScheduledCleaningsByMonth:
+    Record<string, number>;
+
+  unpricedHelperCleaningsByMonth:
+    Record<string, number>;
+
+  unassignedHelperCleaningsByMonth:
     Record<string, number>;
 };
 
 /**
- * Adds one to a numeric monthly total.
+ * Adds an amount to a monthly total.
  * @param {Record<string, number>} totals Monthly totals.
  * @param {string} month YYYY-MM month.
  * @param {number} amount Amount to add.
@@ -35,19 +50,20 @@ function addToMonth(
 }
 
 /**
- * Calculates future revenue from scheduled cleanings.
- * Billing rules are respected for each client type.
+ * Calculates scheduled revenue and helper payouts.
  * @param {ClientSummary[]} clients Business clients.
  * @param {CleaningSummary[]} cleanings Business cleanings.
  * @param {PaymentSummary[]} payments Existing payments.
  * @param {string} todayDate Current Utah date.
+ * @param {HelperSummary[]} helpers Helper payment rates.
  * @return {RevenueProjectionMetrics} Projection data.
  */
 export function calculateRevenueProjectionMetrics(
   clients: ClientSummary[],
   cleanings: CleaningSummary[],
   payments: PaymentSummary[],
-  todayDate: string
+  todayDate: string,
+  helpers: HelperSummary[]
 ): RevenueProjectionMetrics {
   const remainingScheduledCleaningsByMonth:
     Record<string, number> = {};
@@ -55,7 +71,16 @@ export function calculateRevenueProjectionMetrics(
   const remainingScheduledRevenueByMonth:
     Record<string, number> = {};
 
+  const remainingScheduledHelperPayoutsByMonth:
+    Record<string, number> = {};
+
   const unpricedScheduledCleaningsByMonth:
+    Record<string, number> = {};
+
+  const unpricedHelperCleaningsByMonth:
+    Record<string, number> = {};
+
+  const unassignedHelperCleaningsByMonth:
     Record<string, number> = {};
 
   const clientsById = new Map(
@@ -65,12 +90,72 @@ export function calculateRevenueProjectionMetrics(
     ])
   );
 
-  const existingPaymentIds = new Set(
-    payments.map((payment) => payment.id)
+  const helpersById = new Map(
+    helpers.map((helper) => [
+      helper.uid,
+      helper,
+    ])
   );
 
-  const projectedBillingIds =
-    new Set<string>();
+  // Find cleanings already linked to payment records.
+  const recordedCleaningIds = new Set<string>();
+
+  // Identify billing periods already recorded.
+  const recordedMonthlyBills = new Set<string>();
+  const recordedBiweeklyBills = new Set<string>();
+
+  for (const payment of payments) {
+    if (payment.cleaningId) {
+      recordedCleaningIds.add(payment.cleaningId);
+    }
+
+    for (
+      const cleaningId of
+      payment.includedCleaningIds ?? []
+    ) {
+      recordedCleaningIds.add(cleaningId);
+    }
+
+    // Compatibility with older payment IDs.
+    recordedCleaningIds.add(payment.id);
+
+    if (
+      payment.billingType === "Fixed Monthly" &&
+      payment.cleaningDate.length >= 7
+    ) {
+      recordedMonthlyBills.add(
+        `${payment.clientId}_${payment.cleaningDate.slice(0, 7)}`
+      );
+    }
+
+    if (
+      payment.billingType === "Biweekly" &&
+      payment.periodEnd
+    ) {
+      recordedBiweeklyBills.add(
+        `${payment.clientId}_${payment.periodEnd}`
+      );
+    }
+
+    // Compatibility with older deterministic IDs.
+    if (payment.id.startsWith("monthly_")) {
+      recordedMonthlyBills.add(
+        `${payment.clientId}_${payment.id.slice(-7)}`
+      );
+    }
+
+    if (
+      payment.id.startsWith("biweekly_") &&
+      payment.periodEnd
+    ) {
+      recordedBiweeklyBills.add(
+        `${payment.clientId}_${payment.periodEnd}`
+      );
+    }
+  }
+
+  const projectedMonthlyBills = new Set<string>();
+  const projectedBiweeklyBills = new Set<string>();
 
   for (const cleaning of cleanings) {
     if (
@@ -90,6 +175,11 @@ export function calculateRevenueProjectionMetrics(
       1
     );
 
+    // Avoid counting a recorded cleaning twice.
+    if (recordedCleaningIds.has(cleaning.id)) {
+      continue;
+    }
+
     const client =
       clientsById.get(cleaning.clientId);
 
@@ -103,18 +193,72 @@ export function calculateRevenueProjectionMetrics(
       continue;
     }
 
+    // Helper costs are calculated per cleaning,
+    // not per monthly or biweekly invoice.
+    const assignedHelperIds = [
+      ...new Set(cleaning.assignedHelpers),
+    ];
+
+    if (
+      client.helperNeeded &&
+      assignedHelperIds.length === 0
+    ) {
+      addToMonth(
+        unassignedHelperCleaningsByMonth,
+        cleaningMonth,
+        1
+      );
+    }
+
+    if (assignedHelperIds.length > 0) {
+      const referencePrice =
+        client.pricePerCleaning;
+
+      if (
+        !Number.isFinite(referencePrice) ||
+        referencePrice <= 0
+      ) {
+        addToMonth(
+          unpricedHelperCleaningsByMonth,
+          cleaningMonth,
+          1
+        );
+      } else {
+        let helperTotal = 0;
+
+        for (const helperId of assignedHelperIds) {
+          const helper = helpersById.get(helperId);
+
+          const percentage =
+            helper?.payoutPercentage ?? 50;
+
+          helperTotal += getDefaultHelperPayout(
+            referencePrice,
+            true,
+            percentage
+          );
+        }
+
+        addToMonth(
+          remainingScheduledHelperPayoutsByMonth,
+          cleaningMonth,
+          Math.round(helperTotal * 100) / 100
+        );
+      }
+    }
+
+    // Per-cleaning revenue.
     if (client.billingType === "Per Cleaning") {
-      if (client.pricePerCleaning <= 0) {
+      if (
+        !Number.isFinite(client.pricePerCleaning) ||
+        client.pricePerCleaning <= 0
+      ) {
         addToMonth(
           unpricedScheduledCleaningsByMonth,
           cleaningMonth,
           1
         );
 
-        continue;
-      }
-
-      if (existingPaymentIds.has(cleaning.id)) {
         continue;
       }
 
@@ -127,8 +271,12 @@ export function calculateRevenueProjectionMetrics(
       continue;
     }
 
+    // Fixed monthly revenue: one bill per month.
     if (client.billingType === "Fixed Monthly") {
-      if (client.monthlyRate <= 0) {
+      if (
+        !Number.isFinite(client.monthlyRate) ||
+        client.monthlyRate <= 0
+      ) {
         addToMonth(
           unpricedScheduledCleaningsByMonth,
           cleaningMonth,
@@ -138,17 +286,17 @@ export function calculateRevenueProjectionMetrics(
         continue;
       }
 
-      const paymentId =
-        `monthly_${client.id}_${cleaningMonth}`;
+      const billingKey =
+        `${client.id}_${cleaningMonth}`;
 
       if (
-        existingPaymentIds.has(paymentId) ||
-        projectedBillingIds.has(paymentId)
+        recordedMonthlyBills.has(billingKey) ||
+        projectedMonthlyBills.has(billingKey)
       ) {
         continue;
       }
 
-      projectedBillingIds.add(paymentId);
+      projectedMonthlyBills.add(billingKey);
 
       addToMonth(
         remainingScheduledRevenueByMonth,
@@ -159,7 +307,9 @@ export function calculateRevenueProjectionMetrics(
       continue;
     }
 
+    // Biweekly revenue: one bill per period.
     if (
+      !Number.isFinite(client.biweeklyRate) ||
       client.biweeklyRate <= 0 ||
       !client.biweeklyAnchorDate
     ) {
@@ -173,24 +323,22 @@ export function calculateRevenueProjectionMetrics(
     }
 
     try {
-      const {
-        periodEnd,
-      } = getBiweeklyPeriod(
+      const {periodEnd} = getBiweeklyPeriod(
         cleaning.date,
         client.biweeklyAnchorDate
       );
 
-      const paymentId =
-        `biweekly_${client.id}_${periodEnd}`;
+      const billingKey =
+        `${client.id}_${periodEnd}`;
 
       if (
-        existingPaymentIds.has(paymentId) ||
-        projectedBillingIds.has(paymentId)
+        recordedBiweeklyBills.has(billingKey) ||
+        projectedBiweeklyBills.has(billingKey)
       ) {
         continue;
       }
 
-      projectedBillingIds.add(paymentId);
+      projectedBiweeklyBills.add(billingKey);
 
       const billingMonth =
         periodEnd.slice(0, 7);
@@ -212,6 +360,9 @@ export function calculateRevenueProjectionMetrics(
   return {
     remainingScheduledCleaningsByMonth,
     remainingScheduledRevenueByMonth,
+    remainingScheduledHelperPayoutsByMonth,
     unpricedScheduledCleaningsByMonth,
+    unpricedHelperCleaningsByMonth,
+    unassignedHelperCleaningsByMonth,
   };
 }
