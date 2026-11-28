@@ -3,6 +3,9 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
+    "test": "npm run build && node --test tests/biweeklyPayments.test.cjs",
+    "test:integration": "npm run build && node --test tests/biweeklyPayments.integration.cjs",
+    "test:rules": "node --test tests/biweeklyPayments.rules.cjs",
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "shell": "npm run build && firebase functions:shell",

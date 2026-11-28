@@ -447,9 +447,32 @@ service cloud.firestore {
             );
         }
 
+        // The scheduled Admin SDK job creates biweekly invoices.
+        // Browser clients may edit existing financial records, not create
+        // or delete generated invoices. Reserve the canonical ID prefix.
+        function isBackendInvoice(data) {
+          return data.get("billingType", "") == "Biweekly"
+            || paymentId.matches("^biweekly_.*$");
+        }
+
+        function preservesBiweeklyIdentity() {
+          return (
+            !isBackendInvoice(resource.data)
+            && !isBackendInvoice(request.resource.data)
+          ) || (
+            isBiweeklyPayment(resource.data)
+            && isBiweeklyPayment(request.resource.data)
+            && request.resource.data.periodStart == resource.data.periodStart
+            && request.resource.data.periodEnd == resource.data.periodEnd
+            && request.resource.data.includedCleaningIds
+              == resource.data.includedCleaningIds
+          );
+        }
+
         allow read: if isAdmin();
 
         allow create: if isAdmin()
+          && !isBackendInvoice(request.resource.data)
           && validPaymentFields(
             request.resource.data
           )
@@ -458,6 +481,7 @@ service cloud.firestore {
           );
 
         allow update: if isAdmin()
+          && preservesBiweeklyIdentity()
           && validPaymentFields(
             request.resource.data
           )
@@ -477,7 +501,8 @@ service cloud.firestore {
           && request.resource.data.cleaningDate
             == resource.data.cleaningDate;
 
-        allow delete: if isAdmin();
+        allow delete: if isAdmin()
+          && !isBackendInvoice(resource.data);
       }
 
       match /savedAssistantAnswers/{answerId} {
