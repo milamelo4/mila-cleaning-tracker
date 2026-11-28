@@ -19,12 +19,17 @@ last cleaning occurred before the billing end date.
   BIWEEKLY_RECONCILIATION_WRITE_ENABLED=false. Inspect the private Firebase
   function logs for candidate client IDs, period end dates and amounts.
   Never enable writes before verifying candidates.
-- Do not deploy the frontend-only change before the backend is enabled.
-  Review stale browser clients and enforce the intended biweekly payment
-  write/delete policy with Firestore rules before enabling writes. A
-  manually deleted invoice can be recreated by reconciliation; decide
-  on a durable void policy first. Review existing manual edit/deletion
-  flows and stale-client interactions in the emulator.
+- Coordinate frontend, backend and rules releases. Do not deploy the
+  frontend-only change before the backend is enabled. Refresh all open
+  app sessions: older clients may be denied when trying to create or
+  delete a biweekly invoice and may still edit existing totals when
+  their billing identity is unchanged.
+- Biweekly invoice creation/deletion is now server-only; the UI hides
+  its Delete button. Admin financial edits, notes and paid dates remain
+  available; billing period and linked visit IDs are immutable from the
+  browser. A durable void/reversal workflow is not part of this patch.
+  Run npm run test:rules in functions against the demo emulator with
+  client dependencies installed before deployment.
 - Before merging, run npm ci, npm run lint and npm test in functions;
   npm ci, npm run lint and npm run build in client. Verify Firestore
   transactions, rules, scheduler permissions, deployment configuration

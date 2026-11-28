@@ -550,13 +550,15 @@ function PaymentList() {
             Edit payment
           </button>
 
-          <button
-            type="button"
-            onClick={() => handleDelete(payment.firestoreId)}
-            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
-          >
-            Delete payment
-          </button>
+          {!isBiweekly && (
+            <button
+              type="button"
+              onClick={() => handleDelete(payment.firestoreId)}
+              className="rounded-lg border border-red-200 px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+            >
+              Delete payment
+            </button>
+          )}
         </div>
       </div>
     );
